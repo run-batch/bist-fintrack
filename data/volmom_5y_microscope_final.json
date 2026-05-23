@@ -1,0 +1,17 @@
+{
+  "developed_rules": [],
+  "risky_sectors": [],
+  "champion_parameters": {
+    "max_leverage": null,
+    "max_bubble_dist": null,
+    "sector_filter_mode": "none"
+  },
+  "super_model_metrics": {
+    "total_ret": 842.290294092078,
+    "cagr": 56.61629417240837,
+    "win_rate": 71.1138310893513,
+    "idr": 38.922888616891065,
+    "n_trades": 817,
+    "final_portfolio": 9422902.94092078
+  }
+}

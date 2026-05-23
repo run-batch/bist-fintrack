@@ -1,0 +1,926 @@
+{
+  "all_strategies": [
+    {
+      "strategy": "MACD_Fast",
+      "total_return_pct": 48.230782,
+      "n_trades": 76,
+      "win_rate": 46.052632,
+      "alpha": 9.300002,
+      "idr": 51.315789,
+      "xu100_return_pct": 38.93078,
+      "sl_count": 0,
+      "tp_count": 3,
+      "avg_trade_return": 2.756404
+    },
+    {
+      "strategy": "RSI_MACD_Combo",
+      "total_return_pct": 43.184934,
+      "n_trades": 41,
+      "win_rate": 75.609756,
+      "alpha": 4.254154,
+      "idr": 48.780488,
+      "xu100_return_pct": 38.93078,
+      "sl_count": 7,
+      "tp_count": 0,
+      "avg_trade_return": 5.554139
+    },
+    {
+      "strategy": "Price_Action",
+      "total_return_pct": 38.478695,
+      "n_trades": 43,
+      "win_rate": 51.162791,
+      "alpha": -0.452086,
+      "idr": 58.139535,
+      "xu100_return_pct": 38.93078,
+      "sl_count": 3,
+      "tp_count": 6,
+      "avg_trade_return": 4.880425
+    },
+    {
+      "strategy": "MACD_Classic",
+      "total_return_pct": 35.813193,
+      "n_trades": 70,
+      "win_rate": 48.571429,
+      "alpha": -3.117587,
+      "idr": 51.428571,
+      "xu100_return_pct": 38.93078,
+      "sl_count": 0,
+      "tp_count": 2,
+      "avg_trade_return": 2.465269
+    },
+    {
+      "strategy": "Turtle_Short",
+      "total_return_pct": 34.415193,
+      "n_trades": 119,
+      "win_rate": 44.537815,
+      "alpha": -4.515587,
+      "idr": 53.781513,
+      "xu100_return_pct": 38.93078,
+      "sl_count": 1,
+      "tp_count": 2,
+      "avg_trade_return": 1.336217
+    },
+    {
+      "strategy": "Volume_Momentum",
+      "total_return_pct": 34.380938,
+      "n_trades": 35,
+      "win_rate": 65.714286,
+      "alpha": -4.549842,
+      "idr": 40.0,
+      "xu100_return_pct": 38.93078,
+      "sl_count": 9,
+      "tp_count": 2,
+      "avg_trade_return": 4.660276
+    },
+    {
+      "strategy": "RSI_Dip_Classic",
+      "total_return_pct": 33.980279,
+      "n_trades": 39,
+      "win_rate": 71.794872,
+      "alpha": -4.950501,
+      "idr": 46.153846,
+      "xu100_return_pct": 38.93078,
+      "sl_count": 6,
+      "tp_count": 0,
+      "avg_trade_return": 4.52113
+    },
+    {
+      "strategy": "RSI_MACD_Conservative",
+      "total_return_pct": 33.136269,
+      "n_trades": 36,
+      "win_rate": 83.333333,
+      "alpha": -5.794512,
+      "idr": 44.444444,
+      "xu100_return_pct": 38.93078,
+      "sl_count": 4,
+      "tp_count": 0,
+      "avg_trade_return": 5.014368
+    },
+    {
+      "strategy": "Turtle_Classic",
+      "total_return_pct": 27.505483,
+      "n_trades": 61,
+      "win_rate": 44.262295,
+      "alpha": -11.425297,
+      "idr": 55.737705,
+      "xu100_return_pct": 38.93078,
+      "sl_count": 4,
+      "tp_count": 4,
+      "avg_trade_return": 2.718008
+    },
+    {
+      "strategy": "RSI_Dip_Aggressive",
+      "total_return_pct": 25.919115,
+      "n_trades": 74,
+      "win_rate": 67.567568,
+      "alpha": -13.011666,
+      "idr": 44.594595,
+      "xu100_return_pct": 38.93078,
+      "sl_count": 15,
+      "tp_count": 0,
+      "avg_trade_return": 2.518391
+    },
+    {
+      "strategy": "RSI_Dip_Tight",
+      "total_return_pct": 20.403142,
+      "n_trades": 29,
+      "win_rate": 79.310345,
+      "alpha": -18.527638,
+      "idr": 37.931034,
+      "xu100_return_pct": 38.93078,
+      "sl_count": 3,
+      "tp_count": 0,
+      "avg_trade_return": 3.662876
+    },
+    {
+      "strategy": "Stochastic",
+      "total_return_pct": 18.552715,
+      "n_trades": 42,
+      "win_rate": 69.047619,
+      "alpha": -20.378066,
+      "idr": 47.619048,
+      "xu100_return_pct": 38.93078,
+      "sl_count": 8,
+      "tp_count": 0,
+      "avg_trade_return": 2.209904
+    },
+    {
+      "strategy": "Hybrid_RSI_Trend",
+      "total_return_pct": 17.25384,
+      "n_trades": 27,
+      "win_rate": 62.962963,
+      "alpha": -21.67694,
+      "idr": 55.555556,
+      "xu100_return_pct": 38.93078,
+      "sl_count": 7,
+      "tp_count": 0,
+      "avg_trade_return": 3.695381
+    },
+    {
+      "strategy": "EMA_Ribbon",
+      "total_return_pct": 16.1694,
+      "n_trades": 24,
+      "win_rate": 45.833333,
+      "alpha": -22.76138,
+      "idr": 58.333333,
+      "xu100_return_pct": 38.93078,
+      "sl_count": 2,
+      "tp_count": 2,
+      "avg_trade_return": 3.699408
+    },
+    {
+      "strategy": "Mean_Reversion",
+      "total_return_pct": 15.349547,
+      "n_trades": 10,
+      "win_rate": 80.0,
+      "alpha": -23.581234,
+      "idr": 20.0,
+      "xu100_return_pct": 38.93078,
+      "sl_count": 2,
+      "tp_count": 0,
+      "avg_trade_return": 7.554787
+    },
+    {
+      "strategy": "Williams_R_Loose",
+      "total_return_pct": 15.240702,
+      "n_trades": 78,
+      "win_rate": 78.205128,
+      "alpha": -23.690078,
+      "idr": 33.333333,
+      "xu100_return_pct": 38.93078,
+      "sl_count": 11,
+      "tp_count": 0,
+      "avg_trade_return": 1.49344
+    },
+    {
+      "strategy": "Hybrid_RSI_Strict",
+      "total_return_pct": 14.551211,
+      "n_trades": 24,
+      "win_rate": 62.5,
+      "alpha": -24.379569,
+      "idr": 58.333333,
+      "xu100_return_pct": 38.93078,
+      "sl_count": 7,
+      "tp_count": 0,
+      "avg_trade_return": 4.393013
+    },
+    {
+      "strategy": "Williams_R",
+      "total_return_pct": 14.376588,
+      "n_trades": 67,
+      "win_rate": 74.626866,
+      "alpha": -24.554192,
+      "idr": 37.313433,
+      "xu100_return_pct": 38.93078,
+      "sl_count": 10,
+      "tp_count": 0,
+      "avg_trade_return": 1.692105
+    },
+    {
+      "strategy": "Bollinger_Tight",
+      "total_return_pct": 13.60126,
+      "n_trades": 49,
+      "win_rate": 77.55102,
+      "alpha": -25.329521,
+      "idr": 32.653061,
+      "xu100_return_pct": 38.93078,
+      "sl_count": 4,
+      "tp_count": 0,
+      "avg_trade_return": 1.71643
+    },
+    {
+      "strategy": "Triple_Screen",
+      "total_return_pct": 10.385114,
+      "n_trades": 35,
+      "win_rate": 60.0,
+      "alpha": -28.545666,
+      "idr": 48.571429,
+      "xu100_return_pct": 38.93078,
+      "sl_count": 7,
+      "tp_count": 0,
+      "avg_trade_return": 1.976498
+    },
+    {
+      "strategy": "Bollinger_Classic",
+      "total_return_pct": 9.202471,
+      "n_trades": 29,
+      "win_rate": 79.310345,
+      "alpha": -29.72831,
+      "idr": 27.586207,
+      "xu100_return_pct": 38.93078,
+      "sl_count": 3,
+      "tp_count": 0,
+      "avg_trade_return": 1.959868
+    },
+    {
+      "strategy": "SMA_GoldenCross",
+      "total_return_pct": 8.874443,
+      "n_trades": 14,
+      "win_rate": 42.857143,
+      "alpha": -30.056338,
+      "idr": 57.142857,
+      "xu100_return_pct": 38.93078,
+      "sl_count": 5,
+      "tp_count": 4,
+      "avg_trade_return": 5.294755
+    },
+    {
+      "strategy": "Mean_Rev_Tight",
+      "total_return_pct": 1.503796,
+      "n_trades": 34,
+      "win_rate": 67.647059,
+      "alpha": -37.426985,
+      "idr": 38.235294,
+      "xu100_return_pct": 38.93078,
+      "sl_count": 8,
+      "tp_count": 0,
+      "avg_trade_return": 0.522018
+    },
+    {
+      "strategy": "SMA_Short",
+      "total_return_pct": 0.0,
+      "n_trades": 0,
+      "win_rate": 0,
+      "alpha": -38.93078,
+      "idr": 0,
+      "xu100_return_pct": 38.93078,
+      "sl_count": 0,
+      "tp_count": 0,
+      "avg_trade_return": 0
+    }
+  ],
+  "rsi_grid_top10": [
+    {
+      "strategy": "RSI_DIP(buy=40,sell=75,p=14)",
+      "total_return_pct": 57.831428,
+      "n_trades": 40,
+      "win_rate": 65.0,
+      "alpha": 18.900647,
+      "idr": 60.0
+    },
+    {
+      "strategy": "RSI_DIP(buy=35,sell=75,p=21)",
+      "total_return_pct": 57.321944,
+      "n_trades": 24,
+      "win_rate": 62.5,
+      "alpha": 18.391164,
+      "idr": 37.5
+    },
+    {
+      "strategy": "RSI_DIP(buy=35,sell=75,p=14)",
+      "total_return_pct": 55.955571,
+      "n_trades": 37,
+      "win_rate": 67.567568,
+      "alpha": 17.02479,
+      "idr": 48.648649
+    },
+    {
+      "strategy": "RSI_DIP(buy=40,sell=65,p=14)",
+      "total_return_pct": 45.297725,
+      "n_trades": 56,
+      "win_rate": 76.785714,
+      "alpha": 6.366945,
+      "idr": 48.214286
+    },
+    {
+      "strategy": "RSI_DIP(buy=35,sell=65,p=14)",
+      "total_return_pct": 44.882195,
+      "n_trades": 44,
+      "win_rate": 77.272727,
+      "alpha": 5.951414,
+      "idr": 45.454545
+    },
+    {
+      "strategy": "RSI_DIP(buy=35,sell=70,p=14)",
+      "total_return_pct": 44.753952,
+      "n_trades": 43,
+      "win_rate": 74.418605,
+      "alpha": 5.823171,
+      "idr": 41.860465
+    },
+    {
+      "strategy": "RSI_DIP(buy=35,sell=70,p=21)",
+      "total_return_pct": 43.310832,
+      "n_trades": 27,
+      "win_rate": 62.962963,
+      "alpha": 4.380051,
+      "idr": 37.037037
+    },
+    {
+      "strategy": "RSI_DIP(buy=35,sell=65,p=21)",
+      "total_return_pct": 42.936588,
+      "n_trades": 30,
+      "win_rate": 70.0,
+      "alpha": 4.005807,
+      "idr": 30.0
+    },
+    {
+      "strategy": "RSI_DIP(buy=40,sell=75,p=21)",
+      "total_return_pct": 42.807539,
+      "n_trades": 29,
+      "win_rate": 48.275862,
+      "alpha": 3.876759,
+      "idr": 51.724138
+    },
+    {
+      "strategy": "RSI_DIP(buy=40,sell=70,p=14)",
+      "total_return_pct": 41.497368,
+      "n_trades": 52,
+      "win_rate": 65.384615,
+      "alpha": 2.566587,
+      "idr": 55.769231
+    }
+  ],
+  "sma_grid_top5": [
+    {
+      "strategy": "SMA_CROSS(f=5,s=20,200filt)",
+      "total_return_pct": 36.92927,
+      "n_trades": 43,
+      "win_rate": 53.488372,
+      "alpha": -2.001511,
+      "idr": 48.837209
+    },
+    {
+      "strategy": "SMA_CROSS(f=10,s=20,200filt)",
+      "total_return_pct": 31.540079,
+      "n_trades": 43,
+      "win_rate": 51.162791,
+      "alpha": -7.390702,
+      "idr": 46.511628
+    },
+    {
+      "strategy": "SMA_CROSS(f=50,s=100,200filt)",
+      "total_return_pct": 18.184801,
+      "n_trades": 12,
+      "win_rate": 41.666667,
+      "alpha": -20.745979,
+      "idr": 58.333333
+    },
+    {
+      "strategy": "SMA_CROSS(f=20,s=100,200filt)",
+      "total_return_pct": 13.768879,
+      "n_trades": 13,
+      "win_rate": 30.769231,
+      "alpha": -25.161901,
+      "idr": 69.230769
+    },
+    {
+      "strategy": "SMA_CROSS(f=5,s=50,200filt)",
+      "total_return_pct": 12.85094,
+      "n_trades": 25,
+      "win_rate": 40.0,
+      "alpha": -26.079841,
+      "idr": 64.0
+    }
+  ],
+  "bollinger_grid_top5": [
+    {
+      "strategy": "BOLL(w=15,std=2.0)",
+      "total_return_pct": 14.944007,
+      "n_trades": 39,
+      "win_rate": 79.487179,
+      "alpha": -23.986773,
+      "idr": 23.076923
+    },
+    {
+      "strategy": "BOLL(w=30,std=2.0)",
+      "total_return_pct": 14.504779,
+      "n_trades": 24,
+      "win_rate": 83.333333,
+      "alpha": -24.426002,
+      "idr": 16.666667
+    },
+    {
+      "strategy": "BOLL(w=30,std=2.5)",
+      "total_return_pct": 14.004695,
+      "n_trades": 11,
+      "win_rate": 100.0,
+      "alpha": -24.926085,
+      "idr": 18.181818
+    },
+    {
+      "strategy": "BOLL(w=20,std=1.5)",
+      "total_return_pct": 13.60126,
+      "n_trades": 49,
+      "win_rate": 77.55102,
+      "alpha": -25.329521,
+      "idr": 32.653061
+    },
+    {
+      "strategy": "BOLL(w=20,std=2.5)",
+      "total_return_pct": 12.94239,
+      "n_trades": 12,
+      "win_rate": 91.666667,
+      "alpha": -25.988391,
+      "idr": 8.333333
+    }
+  ],
+  "best_strategy_full": {
+    "name": "RSI_DIP(buy=40,sell=75,p=14)",
+    "metrics": {
+      "total_return_pct": 57.831428,
+      "final_value": 157831.427699,
+      "n_trades": 40,
+      "win_rate": 65.0,
+      "avg_trade_return": 6.625072,
+      "idr": 60.0,
+      "alpha": 18.900647,
+      "xu100_return_pct": 38.93078,
+      "sl_count": 8,
+      "tp_count": 1
+    },
+    "walk_forward": {
+      "name": "RSI_DIP(buy=40,sell=75,p=14)",
+      "fold_returns": [
+        57.831428,
+        14.816284,
+        6.298684
+      ],
+      "mean_return": 26.315465,
+      "std_return": 22.554812,
+      "consistency": "DEGISKEN !"
+    },
+    "trades": [
+      {
+        "ticker": "EREGL",
+        "buy_date": "2025-06-02",
+        "sell_date": "2025-06-17",
+        "buy_price": 22.804457,
+        "sell_price": 26.350937,
+        "return_pct": 15.551698,
+        "type": "SIG",
+        "max_drawdown": 0,
+        "incorrect": 0
+      },
+      {
+        "ticker": "SISE",
+        "buy_date": "2025-06-17",
+        "sell_date": "2025-07-03",
+        "buy_price": 32.759998,
+        "sell_price": 37.0,
+        "return_pct": 12.942619,
+        "type": "SIG",
+        "max_drawdown": 2.075691,
+        "incorrect": 0
+      },
+      {
+        "ticker": "FROTO",
+        "buy_date": "2025-05-29",
+        "sell_date": "2025-07-09",
+        "buy_price": 76.572227,
+        "sell_price": 86.007668,
+        "return_pct": 12.322275,
+        "type": "SIG",
+        "max_drawdown": 5.035543,
+        "incorrect": 1
+      },
+      {
+        "ticker": "KCHOL",
+        "buy_date": "2025-06-02",
+        "sell_date": "2025-07-17",
+        "buy_price": 138.327942,
+        "sell_price": 162.2341,
+        "return_pct": 17.282234,
+        "type": "SIG",
+        "max_drawdown": 1.254354,
+        "incorrect": 0
+      },
+      {
+        "ticker": "ASELS",
+        "buy_date": "2025-05-29",
+        "sell_date": "2025-07-17",
+        "buy_price": 132.031769,
+        "sell_price": 161.69397,
+        "return_pct": 22.465957,
+        "type": "SIG",
+        "max_drawdown": 3.479571,
+        "incorrect": 0
+      },
+      {
+        "ticker": "THYAO",
+        "buy_date": "2025-05-30",
+        "sell_date": "2025-08-12",
+        "buy_price": 266.933594,
+        "sell_price": 316.241547,
+        "return_pct": 18.471992,
+        "type": "SIG",
+        "max_drawdown": 6.557298,
+        "incorrect": 1
+      },
+      {
+        "ticker": "EREGL",
+        "buy_date": "2025-07-31",
+        "sell_date": "2025-08-18",
+        "buy_price": 26.719999,
+        "sell_price": 28.780001,
+        "return_pct": 7.709586,
+        "type": "SIG",
+        "max_drawdown": 0,
+        "incorrect": 0
+      },
+      {
+        "ticker": "DOAS",
+        "buy_date": "2025-06-17",
+        "sell_date": "2025-08-18",
+        "buy_price": 157.506134,
+        "sell_price": 184.838074,
+        "return_pct": 17.352937,
+        "type": "SIG",
+        "max_drawdown": 2.470588,
+        "incorrect": 0
+      },
+      {
+        "ticker": "TUPRS",
+        "buy_date": "2025-08-14",
+        "sell_date": "2025-09-19",
+        "buy_price": 147.796066,
+        "sell_price": 180.126465,
+        "return_pct": 21.875006,
+        "type": "SIG",
+        "max_drawdown": 0,
+        "incorrect": 0
+      },
+      {
+        "ticker": "ASELS",
+        "buy_date": "2025-08-13",
+        "sell_date": "2025-09-22",
+        "buy_price": 173.978333,
+        "sell_price": 213.328201,
+        "return_pct": 22.617684,
+        "type": "SIG",
+        "max_drawdown": 2.411022,
+        "incorrect": 0
+      },
+      {
+        "ticker": "YKBNK",
+        "buy_date": "2025-08-19",
+        "sell_date": "2025-09-23",
+        "buy_price": 32.380001,
+        "sell_price": 34.98,
+        "return_pct": 8.029643,
+        "type": "SIG",
+        "max_drawdown": 9.697348,
+        "incorrect": 1
+      },
+      {
+        "ticker": "BIMAS",
+        "buy_date": "2025-08-20",
+        "sell_date": "2025-10-01",
+        "buy_price": 252.299072,
+        "sell_price": 281.245575,
+        "return_pct": 11.473091,
+        "type": "SIG",
+        "max_drawdown": 5.214431,
+        "incorrect": 1
+      },
+      {
+        "ticker": "AKBNK",
+        "buy_date": "2025-07-31",
+        "sell_date": "2025-10-03",
+        "buy_price": 65.403786,
+        "sell_price": 57.603779,
+        "return_pct": -10.0,
+        "type": "SL",
+        "max_drawdown": 11.925926,
+        "incorrect": 1
+      },
+      {
+        "ticker": "GARAN",
+        "buy_date": "2025-09-02",
+        "sell_date": "2025-10-14",
+        "buy_price": 135.138916,
+        "sell_price": 114.858459,
+        "return_pct": -10.0,
+        "type": "SL",
+        "max_drawdown": 15.007118,
+        "incorrect": 1
+      },
+      {
+        "ticker": "AKBNK",
+        "buy_date": "2025-10-03",
+        "sell_date": "2025-10-14",
+        "buy_price": 57.603779,
+        "sell_price": 51.838554,
+        "return_pct": -10.0,
+        "type": "SL",
+        "max_drawdown": 10.008414,
+        "incorrect": 1
+      },
+      {
+        "ticker": "GARAN",
+        "buy_date": "2025-10-14",
+        "sell_date": "2025-11-04",
+        "buy_price": 114.858459,
+        "sell_price": 128.987488,
+        "return_pct": 12.301252,
+        "type": "SIG",
+        "max_drawdown": 1.171552,
+        "incorrect": 0
+      },
+      {
+        "ticker": "SISE",
+        "buy_date": "2025-10-03",
+        "sell_date": "2025-11-06",
+        "buy_price": 35.599998,
+        "sell_price": 37.619999,
+        "return_pct": 5.674159,
+        "type": "SIG",
+        "max_drawdown": 7.640442,
+        "incorrect": 1
+      },
+      {
+        "ticker": "THYAO",
+        "buy_date": "2025-10-03",
+        "sell_date": "2025-11-10",
+        "buy_price": 311.0,
+        "sell_price": 278.25,
+        "return_pct": -10.0,
+        "type": "SL",
+        "max_drawdown": 10.530547,
+        "incorrect": 1
+      },
+      {
+        "ticker": "ASELS",
+        "buy_date": "2025-11-04",
+        "sell_date": "2025-11-14",
+        "buy_price": 197.048935,
+        "sell_price": 175.776047,
+        "return_pct": -10.0,
+        "type": "SL",
+        "max_drawdown": 10.795739,
+        "incorrect": 1
+      },
+      {
+        "ticker": "FROTO",
+        "buy_date": "2025-10-03",
+        "sell_date": "2025-12-12",
+        "buy_price": 89.636688,
+        "sell_price": 93.684723,
+        "return_pct": 4.516047,
+        "type": "SIG",
+        "max_drawdown": 8.350206,
+        "incorrect": 1
+      },
+      {
+        "ticker": "EREGL",
+        "buy_date": "2025-11-10",
+        "sell_date": "2025-12-15",
+        "buy_price": 25.24,
+        "sell_price": 24.860001,
+        "return_pct": -1.505543,
+        "type": "SIG",
+        "max_drawdown": 5.784466,
+        "incorrect": 1
+      },
+      {
+        "ticker": "BIMAS",
+        "buy_date": "2025-11-14",
+        "sell_date": "2026-01-12",
+        "buy_price": 269.847076,
+        "sell_price": 309.5,
+        "return_pct": 14.694591,
+        "type": "SIG",
+        "max_drawdown": 5.509639,
+        "incorrect": 1
+      },
+      {
+        "ticker": "KCHOL",
+        "buy_date": "2025-10-03",
+        "sell_date": "2026-01-12",
+        "buy_price": 161.655716,
+        "sell_price": 182.188019,
+        "return_pct": 12.701254,
+        "type": "SIG",
+        "max_drawdown": 8.944544,
+        "incorrect": 1
+      },
+      {
+        "ticker": "TUPRS",
+        "buy_date": "2025-12-16",
+        "sell_date": "2026-01-13",
+        "buy_price": 179.345413,
+        "sell_price": 200.190598,
+        "return_pct": 11.622926,
+        "type": "SIG",
+        "max_drawdown": 1.928221,
+        "incorrect": 0
+      },
+      {
+        "ticker": "THYAO",
+        "buy_date": "2025-11-10",
+        "sell_date": "2026-01-19",
+        "buy_price": 278.25,
+        "sell_price": 295.75,
+        "return_pct": 6.289308,
+        "type": "SIG",
+        "max_drawdown": 4.941599,
+        "incorrect": 0
+      },
+      {
+        "ticker": "SISE",
+        "buy_date": "2025-12-26",
+        "sell_date": "2026-01-29",
+        "buy_price": 38.48,
+        "sell_price": 45.779999,
+        "return_pct": 18.970892,
+        "type": "SIG",
+        "max_drawdown": 0.519753,
+        "incorrect": 0
+      },
+      {
+        "ticker": "THYAO",
+        "buy_date": "2026-02-27",
+        "sell_date": "2026-03-06",
+        "buy_price": 307.5,
+        "sell_price": 276.75,
+        "return_pct": -10.0,
+        "type": "SL",
+        "max_drawdown": 10.0,
+        "incorrect": 1
+      },
+      {
+        "ticker": "AKBNK",
+        "buy_date": "2026-02-19",
+        "sell_date": "2026-03-06",
+        "buy_price": 84.29821,
+        "sell_price": 71.750381,
+        "return_pct": -10.0,
+        "type": "SL",
+        "max_drawdown": 14.885048,
+        "incorrect": 1
+      },
+      {
+        "ticker": "TUPRS",
+        "buy_date": "2026-02-17",
+        "sell_date": "2026-03-16",
+        "buy_price": 211.333649,
+        "sell_price": 255.0,
+        "return_pct": 20.662281,
+        "type": "SIG",
+        "max_drawdown": 1.863644,
+        "incorrect": 0
+      },
+      {
+        "ticker": "ASELS",
+        "buy_date": "2026-02-09",
+        "sell_date": "2026-04-10",
+        "buy_price": 292.0,
+        "sell_price": 398.5,
+        "return_pct": 36.472603,
+        "type": "TP",
+        "max_drawdown": 0,
+        "incorrect": 0
+      },
+      {
+        "ticker": "GARAN",
+        "buy_date": "2026-03-06",
+        "sell_date": "2026-04-15",
+        "buy_price": 130.237,
+        "sell_price": 138.800003,
+        "return_pct": 6.574939,
+        "type": "SIG",
+        "max_drawdown": 7.380074,
+        "incorrect": 1
+      },
+      {
+        "ticker": "BIMAS",
+        "buy_date": "2026-02-27",
+        "sell_date": "2026-04-15",
+        "buy_price": 333.75,
+        "sell_price": 376.5,
+        "return_pct": 12.808989,
+        "type": "SIG",
+        "max_drawdown": 6.966292,
+        "incorrect": 1
+      },
+      {
+        "ticker": "AKBNK",
+        "buy_date": "2026-03-16",
+        "sell_date": "2026-04-15",
+        "buy_price": 70.442299,
+        "sell_price": 78.900002,
+        "return_pct": 12.006568,
+        "type": "SIG",
+        "max_drawdown": 6.874137,
+        "incorrect": 1
+      },
+      {
+        "ticker": "AKBNK",
+        "buy_date": "2026-05-04",
+        "sell_date": "2026-05-21",
+        "buy_price": 70.650002,
+        "sell_price": 62.200001,
+        "return_pct": -10.0,
+        "type": "SL",
+        "max_drawdown": 11.960369,
+        "incorrect": 1
+      },
+      {
+        "ticker": "THYAO",
+        "buy_date": "2026-03-06",
+        "sell_date": "2026-05-21",
+        "buy_price": 276.75,
+        "sell_price": 274.0,
+        "return_pct": -0.993677,
+        "type": "OPEN→LIQ",
+        "max_drawdown": 0.993677,
+        "incorrect": 1
+      },
+      {
+        "ticker": "GARAN",
+        "buy_date": "2026-05-04",
+        "sell_date": "2026-05-21",
+        "buy_price": 129.600006,
+        "sell_price": 120.0,
+        "return_pct": -7.407412,
+        "type": "OPEN→LIQ",
+        "max_drawdown": 7.407412,
+        "incorrect": 1
+      },
+      {
+        "ticker": "KCHOL",
+        "buy_date": "2026-05-04",
+        "sell_date": "2026-05-21",
+        "buy_price": 197.399994,
+        "sell_price": 183.300003,
+        "return_pct": -7.142853,
+        "type": "OPEN→LIQ",
+        "max_drawdown": 7.142853,
+        "incorrect": 1
+      },
+      {
+        "ticker": "TUPRS",
+        "buy_date": "2026-05-21",
+        "sell_date": "2026-05-21",
+        "buy_price": 241.699997,
+        "sell_price": 241.699997,
+        "return_pct": 0.0,
+        "type": "OPEN→LIQ",
+        "max_drawdown": 0,
+        "incorrect": 0
+      },
+      {
+        "ticker": "SISE",
+        "buy_date": "2026-03-16",
+        "sell_date": "2026-05-21",
+        "buy_price": 42.48,
+        "sell_price": 42.900002,
+        "return_pct": 0.988705,
+        "type": "OPEN→LIQ",
+        "max_drawdown": 0,
+        "incorrect": 0
+      },
+      {
+        "ticker": "DOAS",
+        "buy_date": "2026-04-30",
+        "sell_date": "2026-05-21",
+        "buy_price": 180.5,
+        "sell_price": 176.300003,
+        "return_pct": -2.326868,
+        "type": "OPEN→LIQ",
+        "max_drawdown": 2.326868,
+        "incorrect": 1
+      }
+    ]
+  }
+}

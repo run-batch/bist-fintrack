@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.ipynb_checkpoints/
+.pytest_cache/
+.vscode/
+.idea/
+
+# Local databases and price caches
+data/bist_fintrack.db
+data/price_cache/
+
+# System logs and run artifacts
+.system_generated/
+*.log

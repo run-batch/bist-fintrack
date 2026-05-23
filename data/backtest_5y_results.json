@@ -1,0 +1,44 @@
+{
+  "generated_at": "2026-05-23 23:36:40",
+  "analysis_period_years": 5,
+  "initial_capital": 1000000.0,
+  "metrics_summary": {
+    "inflation": {
+      "total_return_pct": 650.1107904291966,
+      "cagr_pct": 49.6322073331646,
+      "final_portfolio": 7501107.904291967
+    },
+    "xu100": {
+      "total_return_pct": 850.8520716296473,
+      "cagr_pct": 56.899872765660334,
+      "final_portfolio": 9508520.716296474
+    },
+    "best_volmom": {
+      "total_return_pct": 1135.2225440418863,
+      "cagr_pct": 65.329001131048,
+      "alpha_cagr_pct": 8.429128365387669,
+      "win_rate": 65.96491228070175,
+      "idr": 43.50877192982456,
+      "n_trades": 855,
+      "final_portfolio": 12352225.440418864
+    },
+    "autopsy_volmom": {
+      "total_return_pct": 842.290294092078,
+      "cagr_pct": 56.61629417240837,
+      "alpha_cagr_pct": -0.283578593251967,
+      "win_rate": 71.1138310893513,
+      "idr": 38.922888616891065,
+      "n_trades": 817,
+      "final_portfolio": 9422902.94092078
+    },
+    "aggressive_ai": {
+      "total_return_pct": 670.4782456796256,
+      "cagr_pct": 50.43610354232082,
+      "alpha_cagr_pct": -6.463769223339511,
+      "win_rate": 55.11482254697286,
+      "idr": 51.56576200417536,
+      "n_trades": 479,
+      "final_portfolio": 7704782.456796257
+    }
+  }
+}

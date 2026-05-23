@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BIST Radar Yönetim Paneli</title>
+    <!-- Robots meta tag to avoid indexing of administrative dashboard -->
+    <meta name="robots" content="noindex, nofollow">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* Custom local styles for Admin Panel specific elements */
+        .admin-main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr;
+            gap: 24px;
+            margin-top: 24px;
+        }
+        @media(max-width: 900px) {
+            .admin-main-grid { grid-template-columns: 1fr; }
+        }
+        .admin-form-card {
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .admin-title-btn {
+            background: var(--clr-primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-family: var(--font-sans);
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        .admin-title-btn:hover {
+            background: #4f46e5;
+            transform: translateY(-2px);
+        }
+        .admin-title-btn.secondary {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-glass);
+            box-shadow: none;
+        }
+        .admin-title-btn.secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .admin-title-btn.danger {
+            background: var(--clr-rose-glow);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+            box-shadow: none;
+        }
+        .admin-title-btn.danger:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
+        .form-group-admin {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .form-group-admin label {
+            font-size: 13px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        .form-group-admin input {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-glass);
+            border-radius: 8px;
+            padding: 12px;
+            color: white;
+            font-family: var(--font-sans);
+            font-size: 14px;
+            transition: var(--transition);
+        }
+        .form-group-admin input:focus {
+            outline: none;
+            border-color: var(--clr-primary);
+        }
+        .admin-list-card {
+            padding: 24px;
+        }
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+        .admin-table th {
+            padding: 12px 16px;
+            font-size: 12px;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-glass);
+        }
+        .admin-table td {
+            padding: 12px 16px;
+            font-size: 13.5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+        }
+        .admin-table tbody tr:hover {
+            background: rgba(255, 255, 255, 0.01);
+        }
+        .log-terminal {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-glass);
+            border-radius: 10px;
+            padding: 14px;
+            height: 120px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 11px;
+            color: #34d399;
+            overflow-y: auto;
+            line-height: 1.5;
+        }
+        .action-btns-wrap {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+
+    <div class="app-container">
+        <!-- HEADER -->
+        <header class="app-header">
+            <div class="logo-section">
+                <div class="logo-icon">
+                    <i class="fa-solid fa-screwdriver-wrench"></i>
+                </div>
+                <div class="logo-text">
+                    <h1>BIST Radar <span>Yönetim</span></h1>
+                    <p>Özel Yönetici & Sistem Kontrol Paneli</p>
+                </div>
+            </div>
+            
+            <div class="system-status-indicator" id="sys-indicator">
+                <span class="status-dot green"></span>
+                <span class="status-label">Bağlantı Kuruluyor...</span>
+            </div>
+
+            <div>
+                <a href="/index.html" class="admin-title-btn secondary"><i class="fa-solid fa-house"></i> Ana Sayfaya Dön</a>
+            </div>
+        </header>
+
+        <!-- STAT CARDS -->
+        <div class="stats-row">
+            <div class="stat-card glass-card">
+                <div class="stat-icon purple"><i class="fa-solid fa-server"></i></div>
+                <div class="stat-info">
+                    <h3>Otomatik Zamanlayıcı</h3>
+                    <p class="stat-value" style="font-size: 18px; color: var(--clr-emerald)" id="stat-scheduler">Aktif (24s)</p>
+                </div>
+            </div>
+            <div class="stat-card glass-card">
+                <div class="stat-icon emerald"><i class="fa-solid fa-database"></i></div>
+                <div class="stat-info">
+                    <h3>Kayıtlı Hisse / Şirket</h3>
+                    <p class="stat-value" id="stat-total-assets">-</p>
+                </div>
+            </div>
+            <div class="stat-card glass-card">
+                <div class="stat-icon amber"><i class="fa-solid fa-list-check"></i></div>
+                <div class="stat-info">
+                    <h3>Hesaplanan Değerleme</h3>
+                    <p class="stat-value" id="stat-total-valuations">-</p>
+                </div>
+            </div>
+            <div class="stat-card glass-card">
+                <div class="stat-icon rose"><i class="fa-solid fa-clock"></i></div>
+                <div class="stat-info">
+                    <h3>Son Güncelleme</h3>
+                    <p class="stat-value" id="stat-last-sync" style="font-size: 15px; margin-top: 4px;">-</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- MAIN LAYOUT -->
+        <div class="admin-main-grid">
+            
+            <!-- LEFT COLUMN: CONTROLS & FORMS -->
+            <div style="display: flex; flex-direction: column; gap: 24px;">
+                <div class="admin-form-card glass-card">
+                    <h3 style="font-size: 18px; font-weight: 700; border-bottom: 1px solid var(--border-glass); padding-bottom: 10px;"><i class="fa-solid fa-gears"></i> Sistem İşlemleri</h3>
+                    
+                    <p style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">
+                        Sistem her gece 23:00'te tüm BIST verilerini (yfinance, bigpara scraping fallbacks) otomatik yeniler. Acil durumlarda verileri anlık olarak arka planda el ile güncelleyebilirsiniz.
+                    </p>
+                    
+                    <div class="action-btns-wrap">
+                        <button class="admin-title-btn" id="refresh-btn">
+                            <i class="fa-solid fa-arrows-rotate"></i> Şimdi Yenile (Arka Plan)
+                        </button>
+                    </div>
+
+                    <div class="form-group-admin">
+                        <label>Sistem Çıktısı / Terminal:</label>
+                        <div class="log-terminal" id="terminal-log">
+                            [Sistem] Bağlantı başarılı.<br>
+                            [Sistem] Yönetim Paneli aktif. Güncellemeler bekleniyor...
+                        </div>
+                    </div>
+                </div>
+
+                <div class="admin-form-card glass-card">
+                    <h3 style="font-size: 18px; font-weight: 700; border-bottom: 1px solid var(--border-glass); padding-bottom: 10px;"><i class="fa-solid fa-plus"></i> Manuel Hisse Ekle</h3>
+                    
+                    <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5;">
+                        Dinamik listede bulunmayan yeni bir BIST hissesini sisteme ekleyin. Kod sonuna otomatik olarak <code>.IS</code> eklenecektir.
+                    </p>
+
+                    <div class="form-group-admin">
+                        <label>Hisse Kodu (Örn: THYAO, MIATK):</label>
+                        <input type="text" id="add-ticker-input" placeholder="Hisse kodunu yazın..." style="text-transform: uppercase;">
+                    </div>
+
+                    <button class="admin-title-btn secondary" id="add-ticker-btn" style="justify-content: center;">
+                        <i class="fa-solid fa-square-plus"></i> Listeye Ekle
+                    </button>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: SEEDED TICKERS LIST -->
+            <div class="admin-list-card glass-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-glass); padding-bottom: 12px; margin-bottom: 16px;">
+                    <h3 style="font-size: 18px; font-weight: 700;"><i class="fa-solid fa-table-list"></i> Taranan Hisse Listesi</h3>
+                    <div style="font-size: 12px; color: var(--text-muted);">
+                        Arama: <input type="text" id="search-admin" placeholder="Filtrele..." style="background:rgba(255,255,255,0.03); border:1px solid var(--border-glass); border-radius:6px; padding:4px 8px; color:white; font-family:var(--font-sans)">
+                    </div>
+                </div>
+
+                <div style="max-height: 520px; overflow-y: auto;">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Hisse</th>
+                                <th>BIST 30</th>
+                                <th>BIST 100</th>
+                                <th style="text-align: right;">İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-tbody">
+                            <!-- Dynamic rows -->
+                            <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Veriler yükleniyor...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Internal lightweight controller for Admin Panel
+        let allAssets = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchAdminStats();
+            fetchAdminAssets();
+            
+            document.getElementById('refresh-btn').addEventListener('click', triggerManualRefresh);
+            document.getElementById('add-ticker-btn').addEventListener('click', addTicker);
+            document.getElementById('search-admin').addEventListener('input', filterAdminTable);
+        });
+
+        function logToTerminal(msg) {
+            const term = document.getElementById('terminal-log');
+            const time = new Date().toLocaleTimeString();
+            term.innerHTML += `<br>[${time}] ${msg}`;
+            term.scrollTop = term.scrollHeight;
+        }
+
+        async function fetchAdminStats() {
+            try {
+                const response = await fetch('/api/system-status');
+                if (response.ok) {
+                    const status = await response.json();
+                    
+                    document.getElementById('stat-total-assets').innerText = status.total_assets;
+                    document.getElementById('stat-total-valuations').innerText = status.total_valuations;
+                    document.getElementById('stat-last-sync').innerText = status.last_sync_time;
+                    
+                    let indicatorHtml = '';
+                    if (status.sync_status.includes('Running')) {
+                        indicatorHtml = `
+                            <span class="status-dot spinner"></span>
+                            <span class="status-label">Senkronize Ediliyor...</span>
+                        `;
+                        logToTerminal("Sistem şu anda otomatik veri senkronizasyonu çalıştırıyor.");
+                    } else {
+                        indicatorHtml = `
+                            <span class="status-dot green"></span>
+                            <span class="status-label">Senkronizasyon Başarılı</span>
+                        `;
+                    }
+                    document.getElementById('sys-indicator').innerHTML = indicatorHtml;
+                }
+            } catch(e) {
+                console.error("Error fetching stats:", e);
+            }
+        }
+
+        async function fetchAdminAssets() {
+            try {
+                const response = await fetch('/api/stocks');
+                if (response.ok) {
+                    allAssets = await response.json();
+                    renderAdminTable(allAssets);
+                }
+            } catch (e) {
+                console.error("Error loading assets:", e);
+            }
+        }
+
+        function renderAdminTable(data) {
+            const tbody = document.getElementById('admin-tbody');
+            tbody.innerHTML = '';
+            
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Listede hisse bulunamadı.</td></tr>';
+                return;
+            }
+            
+            data.forEach(asset => {
+                const row = document.createElement('tr');
+                
+                const codeCell = `<td><strong>${asset.ticker}</strong><br><span style="font-size:10px; color:var(--text-muted)">${asset.name || asset.ticker}</span></td>`;
+                const b30Cell = `<td>${asset.is_bist30 ? '<i class="fa-solid fa-check" style="color:var(--clr-emerald)"></i>' : '-'}</td>`;
+                const b100Cell = `<td>${asset.is_bist100 ? '<i class="fa-solid fa-check" style="color:var(--clr-primary)"></i>' : '-'}</td>`;
+                
+                const deleteCell = `
+                    <td style="text-align: right;">
+                        <button class="admin-title-btn danger" onclick="removeTicker('${asset.ticker}')" style="padding: 6px 12px; font-size:11px;">
+                            <i class="fa-solid fa-trash"></i> Sil
+                        </button>
+                    </td>
+                `;
+                
+                row.innerHTML = codeCell + b30Cell + b100Cell + deleteCell;
+                tbody.appendChild(row);
+            });
+        }
+
+        function filterAdminTable() {
+            const query = document.getElementById('search-admin').value.toLowerCase().trim();
+            const filtered = allAssets.filter(a => a.ticker.toLowerCase().includes(query) || (a.name && a.name.toLowerCase().includes(query)));
+            renderAdminTable(filtered);
+        }
+
+        async function triggerManualRefresh() {
+            logToTerminal("Manuel güncelleme tetikleniyor...");
+            try {
+                const response = await fetch('/api/admin/refresh', { method: 'POST' });
+                const res = await response.json();
+                
+                if (res.status === 'success') {
+                    logToTerminal("GÜNCELLEME BAŞLADI: Yfinance ve Scraping arka planda tetiklendi. Tamamlanması 1-2 dakika sürebilir.");
+                    fetchAdminStats();
+                } else {
+                    logToTerminal(`HATA: ${res.message}`);
+                }
+            } catch (e) {
+                logToTerminal("Bağlantı hatası oluştu.");
+            }
+        }
+
+        async function addTicker() {
+            const input = document.getElementById('add-ticker-input');
+            const ticker = input.value.trim().toUpperCase();
+            
+            if (!ticker) return;
+            
+            logToTerminal(`${ticker} ekleniyor...`);
+            try {
+                const response = await fetch('/api/admin/add-ticker', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ticker: ticker })
+                });
+                const res = await response.json();
+                
+                if (res.status === 'success') {
+                    logToTerminal(`BAŞARILI: ${ticker} izleme listesine eklendi.`);
+                    input.value = '';
+                    fetchAdminStats();
+                    fetchAdminAssets();
+                } else {
+                    logToTerminal(`BİLGİ/HATA: ${res.message}`);
+                }
+            } catch (e) {
+                logToTerminal("Ekleme başarısız. Bağlantı hatası.");
+            }
+        }
+
+        async function removeTicker(ticker) {
+            if (!confirm(`${ticker} hissesini ve tüm verilerini silmek istediğinize emin misiniz?`)) return;
+            
+            logToTerminal(`${ticker} siliniyor...`);
+            try {
+                const response = await fetch(`/api/admin/remove-ticker/${ticker}`, { method: 'DELETE' });
+                const res = await response.json();
+                
+                if (res.status === 'success') {
+                    logToTerminal(`BAŞARILI: ${ticker} listeden kaldırıldı.`);
+                    fetchAdminStats();
+                    fetchAdminAssets();
+                } else {
+                    logToTerminal(`HATA: ${res.message}`);
+                }
+            } catch (e) {
+                logToTerminal("Silme işlemi başarısız. Bağlantı hatası.");
+            }
+        }
+    </script>
+</body>
+</html>
