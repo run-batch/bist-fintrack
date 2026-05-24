@@ -135,6 +135,37 @@ def run_single_backtest_scenario(config, db_funds, valid_tickers, stock_data, xu
                         index_trend_neg = True
 
         # A.3. Pre-calculate Daily Scores for all tickers on this day
+        # Compute dynamic sectoral statistics on this day to avoid look-ahead bias
+        fundamentals_on_day = []
+        for t in valid_tickers:
+            fund = db_funds[t]
+            p_close = current_prices.get(t, 0.0)
+            if p_close > 0:
+                eps_val = fund["trailing_eps"]
+                pb_ratio = fund["pb_ratio"] or 1.5
+                pe_ratio = p_close / eps_val if eps_val > 0 else None
+                eveb_ratio = pe_ratio * 0.7 if (pe_ratio and pe_ratio < 100) else 15.0
+                
+                fundamentals_on_day.append({
+                    'sector': fund["sector"] or "Diğer",
+                    'pe': pe_ratio if (pe_ratio and pe_ratio > 0) else None,
+                    'pb': pb_ratio if (pb_ratio and pb_ratio > 0) else None,
+                    'eveb': eveb_ratio
+                })
+        df_funds_day = pd.DataFrame(fundamentals_on_day)
+        
+        sector_stats_day = {}
+        if not df_funds_day.empty:
+            for sect, group in df_funds_day.groupby('sector'):
+                sector_stats_day[sect] = {
+                    'pe_mean': float(group['pe'].dropna().mean()) if not group['pe'].dropna().empty else 12.0,
+                    'pe_std': float(group['pe'].dropna().std()) if (len(group['pe'].dropna()) > 1 and group['pe'].dropna().std() > 0.01) else 1.0,
+                    'pb_mean': float(group['pb'].dropna().mean()) if not group['pb'].dropna().empty else 1.5,
+                    'pb_std': float(group['pb'].dropna().std()) if (len(group['pb'].dropna()) > 1 and group['pb'].dropna().std() > 0.01) else 0.5,
+                    'evebitda_mean': float(group['eveb'].dropna().mean()) if not group['eveb'].dropna().empty else 8.0,
+                    'evebitda_std': float(group['eveb'].dropna().std()) if (len(group['eveb'].dropna()) > 1 and group['eveb'].dropna().std() > 0.01) else 2.0
+                }
+                
         daily_scores = {}
         for t in valid_tickers:
             df_t = stock_data[t]
@@ -149,13 +180,18 @@ def run_single_backtest_scenario(config, db_funds, valid_tickers, stock_data, xu
                 continue
                 
             fund = db_funds[t]
+            sect_stats_day = sector_stats_day.get(fund["sector"] or "Diğer", {
+                'pe_mean': 12.0, 'pe_std': 1.0,
+                'pb_mean': 1.5, 'pb_std': 0.5,
+                'evebitda_mean': 8.0, 'evebitda_std': 2.0
+            })
             
-            # Reconstruct Daily Zeka Skoru with custom strategy params
+            # Reconstruct Daily Zeka Skoru with custom strategy params and daily sector stats
             if config["id"] in ["aggressive_ai", "autopsy_volmom"]:
                 score = get_aggressive_score(
                     price=p_close,
                     eps=fund["trailing_eps"],
-                    bvps=p_close / fund["pb_ratio"],
+                    bvps=p_close / (fund["pb_ratio"] or 1.5),
                     roe=fund["roe"],
                     sector=fund["sector"],
                     debt_to_equity=fund["debt_to_equity"],
@@ -165,13 +201,14 @@ def run_single_backtest_scenario(config, db_funds, valid_tickers, stock_data, xu
                     vol_history=df_t['Volume'],
                     idx=idx_in_history,
                     eps_growth_multiplier=eps_growth_multiplier,
-                    market=market
+                    market=market,
+                    sector_stats=sect_stats_day
                 )
             else:
                 score = get_dss_score(
                     price=p_close,
                     eps=fund["trailing_eps"],
-                    bvps=p_close / fund["pb_ratio"],
+                    bvps=p_close / (fund["pb_ratio"] or 1.5),
                     roe=fund["roe"],
                     sector=fund["sector"],
                     debt_to_equity=fund["debt_to_equity"],
@@ -184,7 +221,8 @@ def run_single_backtest_scenario(config, db_funds, valid_tickers, stock_data, xu
                     value_weight=value_weight,
                     momentum_weight=momentum_weight,
                     eps_growth_multiplier=eps_growth_multiplier,
-                    market=market
+                    market=market,
+                    sector_stats=sect_stats_day
                 )
             daily_scores[t] = score
 

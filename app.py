@@ -405,6 +405,31 @@ def calculate_all_valuations(db):
     logger.info("Starting Valuation Computations for BIST & SP500 stocks...")
     stocks = db.query(StockFundamental).all()
     
+    # Pre-calculate Sectoral Stats for Z-Score relative valuation
+    fundamentals_data = []
+    for s in stocks:
+        fundamentals_data.append({
+            'ticker': s.ticker,
+            'sector': s.sector or "Diğer",
+            'market': s.market,
+            'pe': s.pe_ratio if (s.pe_ratio and s.pe_ratio > 0) else None,
+            'pb': s.pb_ratio if (s.pb_ratio and s.pb_ratio > 0) else None,
+            'eveb': s.ev_ebitda if (s.ev_ebitda and s.ev_ebitda > 0) else None
+        })
+    df_funds = pd.DataFrame(fundamentals_data)
+    
+    sector_stats_map = {}
+    if not df_funds.empty:
+        for (mkt, sect), group in df_funds.groupby(['market', 'sector']):
+            sector_stats_map[(mkt, sect)] = {
+                'pe_mean': float(group['pe'].dropna().mean()) if not group['pe'].dropna().empty else 12.0,
+                'pe_std': float(group['pe'].dropna().std()) if (len(group['pe'].dropna()) > 1 and group['pe'].dropna().std() > 0.01) else 1.0,
+                'pb_mean': float(group['pb'].dropna().mean()) if not group['pb'].dropna().empty else 1.5,
+                'pb_std': float(group['pb'].dropna().std()) if (len(group['pb'].dropna()) > 1 and group['pb'].dropna().std() > 0.01) else 0.5,
+                'evebitda_mean': float(group['eveb'].dropna().mean()) if not group['eveb'].dropna().empty else 8.0,
+                'evebitda_std': float(group['eveb'].dropna().std()) if (len(group['eveb'].dropna()) > 1 and group['eveb'].dropna().std() > 0.01) else 2.0
+            }
+            
     for stock in stocks:
         ticker_code = stock.ticker.replace(".IS", "")
         asset = db.query(Asset).filter(Asset.code == ticker_code).first()
@@ -473,7 +498,13 @@ def calculate_all_valuations(db):
                 else:
                     continue # Nothing we can do, skip this stock
         
-        # Call core valuation engine helper from valuation_engine module
+        # Call core valuation engine helper from valuation_engine module with sector stats
+        sect_stats = sector_stats_map.get((market, stock.sector or "Diğer"), {
+            'pe_mean': 12.0, 'pe_std': 1.0,
+            'pb_mean': 1.5, 'pb_std': 0.5,
+            'evebitda_mean': 8.0, 'evebitda_std': 2.0
+        })
+        
         metrics = evaluate_stock_valuations(
             ticker_code=ticker_code,
             name=stock.name,
@@ -493,7 +524,8 @@ def calculate_all_valuations(db):
             sma_50=float(sma50),
             sma_200=float(sma200),
             v_change=float(v_change),
-            trend=trend
+            trend=trend,
+            sector_stats=sect_stats
         )
         
         # Write back to DB
