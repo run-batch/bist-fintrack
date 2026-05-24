@@ -1,9 +1,9 @@
 @echo off
 chcp 65001 > nul
-title BIST FinTrack - Küresel Dolar Bazlı Portföy Simülasyonu
+title BIST FinTrack - Kuresel Dolar Bazli Portfoy Simulasyonu
 color 0b
 echo ====================================================================
-echo    BIST FinTrack - Küresel Dolar Bazlı Portföy Simülasyonu (BIST + S^&P 500)
+echo    BIST FinTrack - Kuresel Dolar Bazli Portfoy Simulasyonu (BIST + S^&P 500)
 echo ====================================================================
 echo [Sistem] Sanal ortam (.venv) aktif ediliyor...
 call .venv\Scripts\activate.bat
@@ -13,11 +13,11 @@ if %errorlevel% neq 0 (
     exit /b %errorlevel%
 )
 
-echo [Sistem] Dolar Bazlı Küresel Portföy Trading Simülasyonu başlatılıyor...
+echo [Sistem] Dolar Bazli Kuresel Portfoy Trading Simulasyonu baslatiliyor...
 echo.
 .venv\Scripts\python.exe run_global_quant_backtest.py
 echo.
 echo ====================================================================
-echo [Sistem] Simülasyon tamamlandı! Sonuçları yukarıdan izleyebilirsiniz.
+echo [Sistem] Simulasyon tamamlandi! Sonuclari yukaridan izleyebilirsiniz.
 echo ====================================================================
 pause

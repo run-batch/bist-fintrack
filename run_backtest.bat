@@ -1,9 +1,9 @@
 @echo off
 chcp 65001 > nul
-title BIST FinTrack - Trading Bot Simülasyonu (Tüm BIST)
+title BIST FinTrack - Trading Bot Simulasyonu (Tum BIST)
 color 0b
 echo ====================================================================
-echo             BIST FinTrack - Trading Bot Simülasyonu
+echo             BIST FinTrack - Trading Bot Simulasyonu
 echo ====================================================================
 echo [Sistem] Sanal ortam (.venv) aktif ediliyor...
 call .venv\Scripts\activate.bat
@@ -18,6 +18,6 @@ echo.
 .venv\Scripts\python.exe run_full_bist_backtest.py
 echo.
 echo ====================================================================
-echo [Sistem] Simülasyon tamamlandı! Sonuclari yukarıdan izleyebilirsiniz.
+echo [Sistem] Simulasyon tamamlandi! Sonuclari yukaridan izleyebilirsiniz.
 echo ====================================================================
 pause
