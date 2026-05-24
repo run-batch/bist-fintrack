@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 > nul
 title BIST FinTrack - Trading Bot Simülasyonu (Tüm BIST)
 color 0b
 echo ====================================================================

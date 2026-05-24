@@ -235,15 +235,18 @@ def main():
                 
                 # Volatility-adjusted dynamic stop loss based on 14-day rolling returns std dev
                 df_t = stock_data[t]
-                idx_in_history = df_t.index.get_loc(current_date)
-                close_history = df_t['Close'].iloc[:idx_in_history+1]
+                idx_in_history = np.searchsorted(df_t.index, current_date, side='right') - 1
                 
                 # Dynamic volatility check
-                if len(close_history) >= 15:
-                    returns = close_history.pct_change().dropna().iloc[-14:]
-                    volatility = returns.std()
-                    # Map volatility to SL between 4% and 15%
-                    dynamic_sl = max(0.04, min(0.15, volatility * 2.0))
+                if idx_in_history >= 0:
+                    close_history = df_t['Close'].iloc[:idx_in_history+1]
+                    if len(close_history) >= 15:
+                        returns = close_history.pct_change().dropna().iloc[-14:]
+                        volatility = returns.std()
+                        # Map volatility to SL between 4% and 15%
+                        dynamic_sl = max(0.04, min(0.15, volatility * 2.0))
+                    else:
+                        dynamic_sl = 0.08
                 else:
                     dynamic_sl = 0.08
                 

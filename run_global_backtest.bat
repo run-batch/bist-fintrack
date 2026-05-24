@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 > nul
 title BIST FinTrack - Küresel Dolar Bazlı Portföy Simülasyonu
 color 0b
 echo ====================================================================
