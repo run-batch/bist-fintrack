@@ -6,6 +6,9 @@ const itemsPerPage = 15;
 let activeProfile = 'protective';
 let activeSortField = 'score';
 let activeSortOrder = 'desc';
+let activeMarket = 'BIST';
+let activeBtMarket = 'BIST';
+
 
 // Elements Selector Cache
 const elements = {
@@ -163,23 +166,24 @@ async function fetchStocksValuations() {
 // --- STATS PANEL ---
 
 function renderStatsPanel() {
-    if (stocksData.length === 0) return;
+    const marketStocks = stocksData.filter(s => s.market === activeMarket);
+    if (marketStocks.length === 0) return;
     
     // 1. Total Stocks
-    elements.statTotalStocks.innerText = stocksData.length;
+    elements.statTotalStocks.innerText = marketStocks.length;
     
     // 2. Strong Buys
-    const strongBuys = stocksData.filter(s => {
+    const strongBuys = marketStocks.filter(s => {
         const valLabel = activeProfile === 'protective' ? s.valuation_label : s.valuation_label_aggressive;
         return valLabel && valLabel.includes("Güçlü AL");
     }).length;
     elements.statStrongBuys.innerText = strongBuys;
     
     // 3. Best Opportunity (MOS based)
-    let bestStock = stocksData[0];
+    let bestStock = marketStocks[0];
     let maxMos = -999;
-    stocksData.forEach(s => {
-        if (s.margin_of_safety > maxMos && s.current_price > 5) {
+    marketStocks.forEach(s => {
+        if (s.margin_of_safety > maxMos && (activeMarket === 'SP500' ? s.current_price > 0.5 : s.current_price > 5)) {
             maxMos = s.margin_of_safety;
             bestStock = s;
         }
@@ -193,10 +197,10 @@ function renderStatsPanel() {
         elements.statTopOpportunity.style.color = "var(--text-primary)";
     }
     
-    // 4. BIST Average Discount
+    // 4. BIST/US Average Discount
     let totalDiscount = 0;
     let counted = 0;
-    stocksData.forEach(s => {
+    marketStocks.forEach(s => {
         if (s.margin_of_safety > 0 && s.margin_of_safety < 4.0) {
             totalDiscount += s.margin_of_safety;
             counted++;
@@ -206,7 +210,14 @@ function renderStatsPanel() {
     const avgDiscountPct = counted > 0 ? (totalDiscount / counted) * 100 : 0;
     elements.statBistDiscount.innerText = `+${avgDiscountPct.toFixed(1)}%`;
     elements.statBistDiscountFill.style.width = `${Math.min(100, avgDiscountPct * 1.5)}%`;
+    
+    // Update the label of the discount card dynamically
+    const discountTitleEl = elements.statBistDiscount.closest('.stat-card').querySelector('h3');
+    if (discountTitleEl) {
+        discountTitleEl.innerText = activeMarket === 'BIST' ? 'BIST İskonto Oranı' : 'S&P 500 İskonto Oranı';
+    }
 }
+
 
 // --- FILTER & SORT LOGIC ---
 
@@ -227,11 +238,32 @@ function populateSectorDropdown() {
 }
 
 function setupFilterListeners() {
+    // Market Selector Buttons
+    const marketBtns = document.querySelectorAll('.market-btn');
+    marketBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            marketBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            activeMarket = btn.dataset.market;
+            
+            // Adjust index filter visibility based on market
+            const indexFilterRow = document.querySelector('.index-stickers-filter');
+            if (indexFilterRow) {
+                indexFilterRow.style.display = activeMarket === 'SP500' ? 'none' : 'flex';
+            }
+            
+            currentPage = 1;
+            renderStatsPanel();
+            applyFiltersAndRenders();
+        });
+    });
+
     // Search input
     elements.searchInput.addEventListener('input', () => {
         currentPage = 1;
         applyFiltersAndRenders();
     });
+
     
     // Sector filter
     elements.sectorFilter.addEventListener('change', () => {
@@ -352,6 +384,9 @@ function applyFiltersAndRenders() {
     const sectorVal = elements.sectorFilter.value;
     
     filteredStocks = stocksData.filter(stock => {
+        // 0. Market Filter
+        const matchesMarket = stock.market === activeMarket;
+
         // 1. Text Search
         const matchesQuery = stock.ticker.toLowerCase().includes(searchQuery) || 
                              (stock.name && stock.name.toLowerCase().includes(searchQuery));
@@ -382,8 +417,9 @@ function applyFiltersAndRenders() {
             }
         }
         
-        return matchesQuery && matchesSector && matchesIndex && matchesSignal;
+        return matchesMarket && matchesQuery && matchesSector && matchesIndex && matchesSignal;
     });
+
     
     // Apply Sorting
     sortFilteredStocks();
@@ -485,6 +521,16 @@ function syncSortSelectDropdown() {
 function renderTablePage() {
     const totalItems = filteredStocks.length;
     elements.pagTotal.innerText = totalItems;
+
+    // Update table header currency labels dynamically
+    const priceHeader = document.querySelector('th[data-sort="price"]');
+    const fairHeader = document.querySelector('th[data-sort="avg_value"]');
+    if (priceHeader) {
+        priceHeader.innerHTML = `Fiyat (${activeMarket === 'SP500' ? '$' : 'TL'}) <i class="fa-solid fa-sort"></i>`;
+    }
+    if (fairHeader) {
+        fairHeader.innerHTML = `Hedef Fiyat (${activeMarket === 'SP500' ? '$' : 'TL'}) <i class="fa-solid fa-sort"></i>`;
+    }
     
     if (totalItems === 0) {
         elements.radarTbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:var(--text-muted); padding:30px;">Filtrelere uygun hisse bulunamadı.</td></tr>`;
@@ -542,10 +588,12 @@ function renderTablePage() {
         const sectorCell = `<td><span class="sector-badge">${stock.sector || "Diğer"}</span></td>`;
         
         // 3. Current Price
-        const priceCell = `<td><span class="price-text">${stock.current_price.toFixed(2)} TL</span></td>`;
+        const isPrefix = stock.market === 'SP500';
+        const priceStr = isPrefix ? `$${stock.current_price.toFixed(2)}` : `${stock.current_price.toFixed(2)} TL`;
+        const priceCell = `<td><span class="price-text">${priceStr}</span></td>`;
         
         // 4. Fair Price Average
-        const fairPrice = stock.avg_value ? `${stock.avg_value.toFixed(2)} TL` : '-';
+        const fairPrice = stock.avg_value ? (isPrefix ? `$${stock.avg_value.toFixed(2)}` : `${stock.avg_value.toFixed(2)} TL`) : '-';
         const fairCell = `<td><span class="target-price-text">${fairPrice}</span></td>`;
         
         // 5. Margin of Safety
@@ -643,10 +691,20 @@ function renderPageNumbers(totalPages) {
 // --- STOCK DETAIL MODAL MODUL ---
 
 function showStockDetail(stock) {
+    const isPrefix = stock.market === 'SP500';
+    const fmtPrice = (val) => {
+        if (val === null || val === undefined || isNaN(val)) return '-';
+        return isPrefix ? `$${val.toFixed(2)}` : `${val.toFixed(2)} TL`;
+    };
+    const fmtPriceNoDec = (val) => {
+        if (val === null || val === undefined || isNaN(val)) return '-';
+        return isPrefix ? `$${val.toFixed(0)}` : `${val.toFixed(0)} TL`;
+    };
+
     // Fill basic details
     elements.modalStockTicker.innerText = stock.ticker;
     elements.modalStockName.innerText = stock.name || stock.ticker;
-    elements.modalCurrentPrice.innerText = `${stock.current_price.toFixed(2)} TL`;
+    elements.modalCurrentPrice.innerText = fmtPrice(stock.current_price);
     
     // Index Stickers
     let stickersHtml = '';
@@ -676,10 +734,10 @@ function showStockDetail(stock) {
     elements.modalRationale.innerText = rationale || "Algoritmik rasyolar stabil görünümdedir. Yatırım kararınızı diğer rasyoları da değerlendirerek vermeniz tavsiye edilir.";
     
     // Algorithmic breakdown values
-    const dcfVal = stock.dcf_value ? `${stock.dcf_value.toFixed(2)} TL` : 'Negatif Akım';
-    const grahamVal = stock.graham_value ? `${stock.graham_value.toFixed(2)} TL` : '-';
-    const multiplesVal = stock.multiples_value ? `${stock.multiples_value.toFixed(2)} TL` : '-';
-    const avgVal = stock.avg_value ? `${stock.avg_value.toFixed(2)} TL` : '-';
+    const dcfVal = (stock.dcf_value && stock.dcf_value > 0) ? fmtPrice(stock.dcf_value) : 'Negatif Akım';
+    const grahamVal = (stock.graham_value && stock.graham_value > 0) ? fmtPrice(stock.graham_value) : '-';
+    const multiplesVal = stock.multiples_value ? fmtPrice(stock.multiples_value) : '-';
+    const avgVal = stock.avg_value ? fmtPrice(stock.avg_value) : '-';
     
     elements.valDcf.innerText = dcfVal;
     elements.valGraham.innerText = grahamVal;
@@ -702,8 +760,8 @@ function showStockDetail(stock) {
     
     // Technical metrics
     elements.techRsi.innerText = stock.rsi ? stock.rsi.toFixed(1) : '50.0';
-    elements.techSma50.innerText = stock.sma_50 ? `${stock.sma_50.toFixed(2)} TL` : '-';
-    elements.techSma200.innerText = stock.sma_200 ? `${stock.sma_200.toFixed(2)} TL` : '-';
+    elements.techSma50.innerText = stock.sma_50 ? fmtPrice(stock.sma_50) : '-';
+    elements.techSma200.innerText = stock.sma_200 ? fmtPrice(stock.sma_200) : '-';
     
     const volSign = stock.volume_change >= 0 ? '+' : '';
     elements.techVolume.innerText = stock.volume_change ? `${volSign}${stock.volume_change.toFixed(1)}%` : '%0.0';
@@ -712,8 +770,8 @@ function showStockDetail(stock) {
     const pesVal = stock.pes_value || (stock.current_price * 0.7);
     const optVal = stock.opt_value || (stock.current_price * 1.5);
     
-    elements.scenPes.innerText = `${pesVal.toFixed(0)} TL`;
-    elements.scenOpt.innerText = `${optVal.toFixed(0)} TL`;
+    elements.scenPes.innerText = fmtPriceNoDec(pesVal);
+    elements.scenOpt.innerText = fmtPriceNoDec(optVal);
     
     // Calculate percentage marker position
     let markerPct = ((stock.current_price - pesVal) / (optVal - pesVal)) * 100;
@@ -721,7 +779,7 @@ function showStockDetail(stock) {
     
     elements.scenMarker.style.left = `${markerPct}%`;
     elements.scenMarkerLabel.style.left = `${markerPct}%`;
-    elements.scenMarkerLabel.innerText = `${stock.current_price.toFixed(0)} TL`;
+    elements.scenMarkerLabel.innerText = fmtPriceNoDec(stock.current_price);
     
     // Open modal
     elements.detailModal.classList.add('active');
@@ -734,7 +792,7 @@ let currentBtScenario = 'autopsy_volmom';
 // Fetch Backtest Results
 async function fetchBacktestResults() {
     try {
-        const response = await fetch('/api/backtest');
+        const response = await fetch(`/api/backtest?market=${activeBtMarket}`);
         if (response.ok) {
             backtestData = await response.json();
             renderBacktestData();
@@ -755,6 +813,16 @@ function setupBacktestListeners() {
             renderBacktestData();
         });
     });
+
+    const btMarketBtns = document.querySelectorAll('#backtest-market-selector button');
+    btMarketBtns.forEach(btn => {
+        btn.addEventListener('click', async () => {
+            btMarketBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            activeBtMarket = btn.dataset.market;
+            await fetchBacktestResults();
+        });
+    });
 }
 
 // Render Backtest Stats & Trades
@@ -764,6 +832,16 @@ function renderBacktestData() {
     const scKey = currentBtScenario; // 'balanced', 'active', 'conservative'
     const scenario = backtestData.scenarios[scKey];
     if (!scenario) return;
+    
+    const isBtPrefix = activeBtMarket === 'SP500';
+    const fmtBtPrice = (val) => {
+        if (val === null || val === undefined) return '-';
+        return isBtPrefix ? `$${val.toLocaleString('en-US', {maximumFractionDigits: 0})}` : `${val.toLocaleString('tr-TR', {maximumFractionDigits: 0})} TL`;
+    };
+    const fmtBtPriceWithDec = (val) => {
+        if (val === null || val === undefined) return '-';
+        return isBtPrefix ? `$${val.toFixed(2)}` : `${val.toFixed(2)} TL`;
+    };
     
     // 1. Return Card
     const retVal = scenario.total_return_pct;
@@ -784,7 +862,7 @@ function renderBacktestData() {
     // 2. Final Value
     const finalValueEl = document.getElementById('bt-final-value');
     if (finalValueEl) {
-        finalValueEl.innerText = `${scenario.final_value.toLocaleString('tr-TR', {maximumFractionDigits: 0})} TL`;
+        finalValueEl.innerText = fmtBtPrice(scenario.final_value);
     }
     
     // 3. Win Rate
@@ -823,6 +901,11 @@ function renderBacktestData() {
     if (bBarLabel) bBarLabel.innerText = `+${benchmarkVal.toFixed(1)}%`;
     if (bBarFill) bBarFill.style.width = `${Math.max(0, Math.min(100, benchmarkVal * 1.5))}%`;
     
+    // Update benchmark bar labels dynamically
+    if (bBarLabel && bBarLabel.previousElementSibling) {
+        bBarLabel.previousElementSibling.innerText = activeBtMarket === 'SP500' ? 'S&P 500 Endeks Getirisi (Pasif Endeks Al-Tut)' : 'XU100 BIST 100 Getirisi (Pasif Endeks Al-Tut)';
+    }
+    
     // Alpha badge
     const alpha = scenario.alpha;
     const alphaBadge = document.getElementById('bt-alpha-badge');
@@ -832,7 +915,7 @@ function renderBacktestData() {
         if (alpha >= 0) {
             alphaBadge.style.backgroundColor = "var(--clr-emerald-glow)";
             alphaBadge.style.color = "#34d399";
-            if (alphaDesc) alphaDesc.innerText = "Yapay Zeka modelimiz BIST 100 endeks getirisini yenerek Alfa yaratmıştır.";
+            if (alphaDesc) alphaDesc.innerText = activeBtMarket === 'SP500' ? "Yapay Zeka modelimiz S&P 500 endeks getirisini yenerek Alfa yaratmıştır." : "Yapay Zeka modelimiz BIST 100 endeks getirisini yenerek Alfa yaratmıştır.";
         } else {
             alphaBadge.style.backgroundColor = "rgba(255, 255, 255, 0.05)";
             alphaBadge.style.color = "var(--text-muted)";
@@ -884,9 +967,9 @@ function renderBacktestData() {
             <td><strong>${t.ticker}</strong></td>
             <td>${typeBadge}</td>
             <td>${t.buy_date}</td>
-            <td>${t.buy_price.toFixed(2)} TL</td>
+            <td>${fmtBtPriceWithDec(t.buy_price)}</td>
             <td>${t.sell_date}</td>
-            <td>${t.sell_price.toFixed(2)} TL</td>
+            <td>${fmtBtPriceWithDec(t.sell_price)}</td>
             <td>%${t.max_drawdown.toFixed(1)}</td>
             <td>${decisionBadge}</td>
             <td style="color:${returnColor}; font-weight:700;">${returnSign}${t.return_pct.toFixed(2)}%</td>

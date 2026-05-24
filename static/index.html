@@ -101,7 +101,28 @@
                     
                     <!-- LEFT WORKSPACE: THE RADAR SCREEN -->
                     <div class="radar-workspace">
+                        <!-- MARKET SELECTOR (BIST vs S&P 500) -->
+                        <div class="market-toggle-container glass-card" style="margin-bottom: 5px; padding: 20px;">
+                            <div class="profile-toggle-header">
+                                <div class="profile-toggle-title" style="font-size: 16px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+                                    <i class="fa-solid fa-globe" style="color: var(--clr-primary)"></i> Küresel Piyasalar & Borsa Seçici
+                                </div>
+                                <div class="profile-toggle-subtitle" style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Borsa İstanbul (BIST) ile ABD S&P 500 piyasaları arasında geçiş yapın. Değerlemeler otomatik olarak yerel para birimleriyle güncellenir.</div>
+                            </div>
+                            <div class="market-toggle-buttons" style="display: flex; gap: 15px; margin-top: 15px;">
+                                <button class="market-btn active" id="market-btn-bist" data-market="BIST">
+                                    <i class="fa-solid fa-turkish-lira-sign"></i>
+                                    <strong>BIST (Borsa İstanbul)</strong>
+                                </button>
+                                <button class="market-btn" id="market-btn-sp500" data-market="SP500">
+                                    <i class="fa-solid fa-dollar-sign"></i>
+                                    <strong>S&P 500 (ABD Borsası)</strong>
+                                </button>
+                            </div>
+                        </div>
+
                         <!-- INTELLIGENCE PROFILE TOGGLE -->
+
                         <div class="profile-toggle-container glass-card">
                             <div class="profile-toggle-header">
                                 <div class="profile-toggle-title">
@@ -308,7 +329,7 @@
 
                 <!-- STRATEGY SELECTOR FOR BACKTEST -->
                 <div class="filter-panel glass-card" style="margin-bottom: 24px; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
-                    <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
                         <span style="font-size: 14.5px; font-weight: 600; color: var(--text-primary)"><i class="fa-solid fa-sliders"></i> Test Senaryosu:</span>
                         <div class="index-stickers-filter" id="backtest-scenario-selector">
                             <button class="index-filter-btn active" data-scenario="autopsy_volmom">✨ YZ Otopsi-VOLMOM (Şampiyon)</button>
@@ -318,10 +339,15 @@
                             <button class="index-filter-btn" data-scenario="conservative">Muhafazakar Klasik</button>
                         </div>
                     </div>
-                    <div style="font-size: 12.5px; color: var(--text-muted);">
-                        <i class="fa-solid fa-vial"></i> <strong>12 Major BIST Hissesiyle</strong> 365 Günlük Simülasyon
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span style="font-size: 14.5px; font-weight: 600; color: var(--text-primary)"><i class="fa-solid fa-globe"></i> Borsa:</span>
+                        <div class="index-stickers-filter" id="backtest-market-selector">
+                            <button class="index-filter-btn active" data-market="BIST">BIST</button>
+                            <button class="index-filter-btn" data-market="SP500">S&P 500</button>
+                        </div>
                     </div>
                 </div>
+
 
                 <!-- STAT CARDS ROW FOR SELECTED STRATEGY -->
                 <div class="stats-row" style="margin-bottom: 24px;">

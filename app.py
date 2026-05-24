@@ -36,6 +36,7 @@ class Asset(Base):
     id = Column(Integer, primary_key=True, index=True)
     code = Column(String, unique=True, index=True)  # e.g., THYAO
     name = Column(String, nullable=True)            # e.g., Turk Hava Yollari
+    market = Column(String, default="BIST")
     is_bist30 = Column(Boolean, default=False)
     is_bist100 = Column(Boolean, default=False)
     last_updated = Column(DateTime, nullable=True)
@@ -44,6 +45,7 @@ class StockFundamental(Base):
     __tablename__ = 'stock_fundamentals'
     ticker = Column(String, primary_key=True)       # e.g., THYAO.IS
     name = Column(String, nullable=True)
+    market = Column(String, default="BIST")
     pe_ratio = Column(Float, nullable=True)         # F/K
     pb_ratio = Column(Float, nullable=True)         # PD/DD
     ev_ebitda = Column(Float, nullable=True)        # FD/FAVÖK
@@ -58,11 +60,13 @@ class StockFundamental(Base):
     data_source = Column(String, default="yfinance") # yfinance, scraping, cached
     last_updated = Column(DateTime)
 
+
 class ValuationResult(Base):
     __tablename__ = 'valuation_results'
     ticker = Column(String, primary_key=True)       # e.g., THYAO.IS
     name = Column(String, nullable=True)
     sector = Column(String, default="Diğer")
+    market = Column(String, default="BIST")
     is_bist30 = Column(Boolean, default=False)
     is_bist100 = Column(Boolean, default=False)
     current_price = Column(Float, default=0.0)
@@ -117,6 +121,12 @@ BIST100_LIST = BIST30_LIST.union({
     "SAYAS", "TARKM", "TATEN", "TSKB", "TTRAK", "TUKAS", "TUREX", "VAKFN", "YBTAS", "ZOREN"
 })
 
+SP500_LIST = [
+    "AAPL", "MSFT", "NVDA", "AMZN", "META", "GOOGL", "TSLA", "BRK-B", "LLY", "AVGO",
+    "JPM", "UNH", "V", "MA", "WMT", "XOM", "PG", "COST", "HD", "JNJ",
+    "ORCL", "BAC", "ABBV", "NFLX", "AMD", "ADBE", "DIS", "CVX", "PEP", "KO"
+]
+
 SECTOR_MAP = {
     # Banks
     'AKBNK': 'Banka', 'GARAN': 'Banka', 'ISCTR': 'Banka', 'YKBNK': 'Banka', 'HALKB': 'Banka', 
@@ -145,7 +155,16 @@ SECTOR_MAP = {
     # Chemistry / Defense
     'SASA': 'Petrokimya / Tekstil', 'PETKM': 'Petrokimya / Tekstil', 'HEKTS': 'Kimya / Tarım',
     # GYO (Real Estate Investment Trusts)
-    'MHRGY': 'GYO', 'PEKGY': 'GYO', 'RYGYO': 'GYO', 'ISGYO': 'GYO'
+    'MHRGY': 'GYO', 'PEKGY': 'GYO', 'RYGYO': 'GYO', 'ISGYO': 'GYO',
+    # S&P 500 US Stocks
+    'AAPL': 'Teknoloji', 'MSFT': 'Teknoloji', 'NVDA': 'Teknoloji', 'AVGO': 'Teknoloji', 'ORCL': 'Teknoloji', 'AMD': 'Teknoloji', 'ADBE': 'Teknoloji',
+    'AMZN': 'Perakende', 'WMT': 'Perakende', 'COST': 'Perakende', 'HD': 'Perakende',
+    'META': 'İletişim / Medya', 'GOOGL': 'İletişim / Medya', 'NFLX': 'İletişim / Medya', 'DIS': 'İletişim / Medya',
+    'TSLA': 'Otomotiv',
+    'JPM': 'Finans / Banka', 'BAC': 'Finans / Banka', 'V': 'Finans / Banka', 'MA': 'Finans / Banka', 'BRK-B': 'Holding',
+    'LLY': 'Sağlık', 'UNH': 'Sağlık', 'JNJ': 'Sağlık', 'ABBV': 'Sağlık',
+    'XOM': 'Enerji', 'CVX': 'Enerji',
+    'PG': 'Tüketici Ürünleri', 'PEP': 'Gıda / İçecek', 'KO': 'Gıda / İçecek'
 }
 
 # --- 3-TIER SCRAPING & RESILIENCE MODUL ---
@@ -293,11 +312,14 @@ def update_all_fundamentals(db):
     
     for asset in assets:
         ticker_code = asset.code
-        ticker_yf = f"{ticker_code}.IS"
+        if asset.market == "SP500":
+            ticker_yf = ticker_code
+        else:
+            ticker_yf = f"{ticker_code}.IS"
         
         stock_fund = db.query(StockFundamental).filter(StockFundamental.ticker == ticker_yf).first()
         if not stock_fund:
-            stock_fund = StockFundamental(ticker=ticker_yf, name=ticker_code, sector=SECTOR_MAP.get(ticker_code, "Diğer"))
+            stock_fund = StockFundamental(ticker=ticker_yf, name=ticker_code, market=asset.market, sector=SECTOR_MAP.get(ticker_code, "Diğer"))
             db.add(stock_fund)
             
         # 1. Tier 1: Try yfinance
@@ -336,17 +358,24 @@ def update_all_fundamentals(db):
                 
             # ROE based Sustainable growth rate estimate
             roe_val = stock_fund.roe or 0.25
-            stock_fund.eps_growth_5y = max(15.0, min(100.0, roe_val * 100 * 0.8))
+            if asset.market == "SP500":
+                # US stocks have more stable, lower growth
+                stock_fund.eps_growth_5y = max(5.0, min(30.0, roe_val * 100 * 0.6))
+            else:
+                stock_fund.eps_growth_5y = max(15.0, min(100.0, roe_val * 100 * 0.8))
             
             stock_fund.data_source = "yfinance"
             stock_fund.last_updated = datetime.now()
             success_count += 1
             
         except Exception as e1:
-            logger.warning(f"Tier 1 failed for {ticker_yf}: {e1}. Initiating Tier 2 Scraper Fallback...")
+            logger.warning(f"Tier 1 failed for {ticker_yf}: {e1}.")
             
-            # 2. Tier 2: Try Scraper Fallback
-            scraped = scrape_bigpara_fallback(ticker_code)
+            scraped = None
+            if asset.market != "SP500":
+                logger.warning("Initiating Tier 2 Scraper Fallback...")
+                scraped = scrape_bigpara_fallback(ticker_code)
+                
             if scraped:
                 stock_fund.pe_ratio = scraped["pe_ratio"] or stock_fund.pe_ratio
                 stock_fund.pb_ratio = scraped["pb_ratio"] or stock_fund.pb_ratio
@@ -357,7 +386,7 @@ def update_all_fundamentals(db):
                 logger.info(f"Tier 2 successfully loaded data for {ticker_code}")
             else:
                 # 3. Tier 3: Local Cache Fallback
-                logger.error(f"Tier 2 failed for {ticker_code}. Fallback to Tier 3 Local Cache...")
+                logger.error(f"Tier 2/Fallback failed for {ticker_code}. Fallback to Tier 3 Local Cache...")
                 stock_fund.data_source = "cached"
                 stock_fund.last_updated = stock_fund.last_updated or datetime.now()
                 fail_count += 1
@@ -369,26 +398,24 @@ def update_all_fundamentals(db):
 
     # Log System Sync Complete State
     state = db.query(SystemState).filter(SystemState.key == "last_sync_status").first()
-    state.value = f"Success ({success_count} OK, {fail_count} Cached)"
-    state.last_updated = datetime.now()
+    if state:
+        state.value = f"Success ({success_count} OK, {fail_count} Cached)"
+        state.last_updated = datetime.now()
     db.commit()
-    logger.info("3-Tier Stock Fundamentals Sync finished.")
 
 def calculate_all_valuations(db):
     """
     Main valuation scanner. Takes SQLite stock fundamentals, 
     downloads historical data to get momentum, and runs the valuation formulas.
     """
-    logger.info("Starting Valuation Computations for all BIST stocks...")
+    logger.info("Starting Valuation Computations for BIST & SP500 stocks...")
     stocks = db.query(StockFundamental).all()
-    
-    # BIST 2Y bond yield default is 45%, used as benchmark risk free rate
-    TR_BOND_YIELD = 45.0
-    ERP = 6.0 # Equity Risk Premium
     
     for stock in stocks:
         ticker_code = stock.ticker.replace(".IS", "")
         asset = db.query(Asset).filter(Asset.code == ticker_code).first()
+        market = asset.market if asset else "BIST"
+        curr = "$" if market == "SP500" else "TL"
         
         # Get Current Price
         cur_price = 0.0
@@ -403,7 +430,7 @@ def calculate_all_valuations(db):
                 close = hist['Close']
                 vol = hist['Volume']
                 
-                # Check if pandas returns a DataFrame (e.g. multi-index or single ticker with column index) or a Series
+                # Check if pandas returns a DataFrame or a Series
                 if isinstance(close, pd.DataFrame):
                     cur_price = float(close.iloc[-1].iloc[0])
                     close_series = close.iloc[:, 0]
@@ -430,11 +457,14 @@ def calculate_all_valuations(db):
             else:
                 raise Exception("Empty historical dataframe")
         except Exception as e_tech:
-            logger.warning(f"Failed to fetch technical trends for {stock.ticker} via yfinance: {e_tech}. Trying scraper pricing...")
+            logger.warning(f"Failed to fetch technical trends for {stock.ticker} via yfinance: {e_tech}.")
             tech_source = "scraping"
             
-            # Retrieve price from bigpara
-            scraped = scrape_bigpara_fallback(ticker_code)
+            scraped = None
+            if market != "SP500":
+                logger.warning("Trying scraper pricing...")
+                scraped = scrape_bigpara_fallback(ticker_code)
+                
             if scraped:
                 cur_price = scraped["price"]
             else:
@@ -468,7 +498,6 @@ def calculate_all_valuations(db):
             eps = cur_price * 0.05 # safe fallback floor
             
         # GYO and Holding EPS adjustment (ROE momentum scaling)
-        # Revaluation profits create virtual EPS, scaled down by ROE to match real capital efficiency
         if sector in ['GYO', 'Holding', 'Holding / Enerji']:
             roe_factor = max(0.05, min(1.0, (roe or 0.0) * 2.0))
             eps *= roe_factor
@@ -477,50 +506,64 @@ def calculate_all_valuations(db):
         is_loss_making = (pe < 0) or (roe < 0)
         
         rationale_parts = []
-        is_bank_holding = sector in ['Banka']
+        is_bank_holding = (sector == 'Banka') or (market == 'SP500' and sector == 'Finans / Banka' and ticker_code in ['JPM', 'BAC'])
         
         # A. DUPONT / NIM BANKACILIK MODÜLÜ
         if is_bank_holding:
             roe_val = roe
-            # DuPont / NIM Metrikleri (ROE ve Beta'ya bağlı gerçekçi ve dinamik simülasyon)
-            nim_val = 0.05 + 0.02 * roe_val
-            npl_val = max(0.005, 0.025 - 0.01 * roe_val)
-            syr_val = 0.16 + 0.04 * (stock.beta or 1.0)
-            
-            # Metriklerin 0-100 arasında normalize puanlanması
-            roe_score = min(100.0, max(0.0, (roe_val / 0.40) * 100)) # %40 ROE tam puan
-            nim_score = min(100.0, max(0.0, (nim_val / 0.07) * 100)) # %7 NIM tam puan
-            npl_score = min(100.0, max(0.0, (1.0 - (npl_val - 0.005) / 0.04) * 100)) # %0.5 NPL 100, %4.5+ 0 puan
-            syr_score = min(100.0, max(0.0, ((syr_val - 0.12) / 0.08) * 100)) # %12 SYR 0, %20+ tam puan
-            
-            bank_score = int(roe_score * 0.30 + nim_score * 0.25 + npl_score * 0.25 + syr_score * 0.20)
-            bank_score = max(5, min(95, bank_score))
-            
-            # Sektörel hedef çarpan değerlemesi
-            target_pe = 8.0 if sector == 'Banka' else 12.0
+            if market == "SP500":
+                nim_val = 0.02 + 0.01 * roe_val
+                npl_val = max(0.002, 0.015 - 0.005 * roe_val)
+                syr_val = 0.12 + 0.02 * (stock.beta or 1.0)
+                
+                # US banking benchmarks
+                roe_score = min(100.0, max(0.0, (roe_val / 0.18) * 100)) # %18 ROE tam puan
+                nim_score = min(100.0, max(0.0, (nim_val / 0.04) * 100)) # %4 NIM tam puan
+                npl_score = min(100.0, max(0.0, (1.0 - (npl_val - 0.002) / 0.015) * 100))
+                syr_score = min(100.0, max(0.0, ((syr_val - 0.10) / 0.06) * 100))
+                
+                bank_score = int(roe_score * 0.30 + nim_score * 0.25 + npl_score * 0.25 + syr_score * 0.20)
+                bank_score = max(5, min(95, bank_score))
+                
+                target_pe = 14.0
+            else:
+                nim_val = 0.05 + 0.02 * roe_val
+                npl_val = max(0.005, 0.025 - 0.01 * roe_val)
+                syr_val = 0.16 + 0.04 * (stock.beta or 1.0)
+                
+                roe_score = min(100.0, max(0.0, (roe_val / 0.40) * 100)) # %40 ROE tam puan
+                nim_score = min(100.0, max(0.0, (nim_val / 0.07) * 100)) # %7 NIM tam puan
+                npl_score = min(100.0, max(0.0, (1.0 - (npl_val - 0.005) / 0.04) * 100)) # %0.5 NPL 100, %4.5+ 0 puan
+                syr_score = min(100.0, max(0.0, ((syr_val - 0.12) / 0.08) * 100)) # %12 SYR 0, %20+ tam puan
+                
+                bank_score = int(roe_score * 0.30 + nim_score * 0.25 + npl_score * 0.25 + syr_score * 0.20)
+                bank_score = max(5, min(95, bank_score))
+                
+                target_pe = 8.0 if sector == 'Banka' else 12.0
+                
             fair_multiples = eps * target_pe
-            
-            # DuPont derecesine göre içsel değer uyarlaması
             intrinsic_avg = fair_multiples * (bank_score / 70.0)
             
-            # Bankalar için klasik DCF ve Graham uygulanmaz
             dcf_val = 0.0
             fair_graham = 0.0
             value_score = bank_score
             mos = (intrinsic_avg / cur_price) - 1.0 if cur_price > 0 else 0.0
             
-            # Senaryo Sınırları
             opt_val = intrinsic_avg * 1.25
             pes_val = intrinsic_avg * 0.75
             
             rationale_parts.append(f"DuPont/NIM Derecelendirmesi: ROE %{roe_val*100:.1f}, NIM %{nim_val*100:.1f}, NPL %{npl_val*100:.1f}, SYR %{syr_val*100:.1f} rasyolarına göre finansal zeka ratingi: {bank_score}/100.")
             
         else:
-            # B. SANAYİ VE DİĞER ŞIKETLER MODÜLÜ (GRAHAM + DCF)
-            # 1. Enflasyon Kalibreli ve Varlık İskontolu Graham Çarpanı (K)
-            expected_inflation = 0.25 # %25 beklenen enflasyon
-            base_k = 11.5 if sector in ['GYO', 'Holding', 'Holding / Enerji'] else 22.5
-            graham_multiplier = base_k / (1.0 + expected_inflation)
+            # B. SANAYİ VE DİĞER ŞIRKETLER MODÜLÜ (GRAHAM + DCF)
+            if market == "SP500":
+                expected_inflation = 0.025 # %2.5 expected inflation
+                base_k = 11.2 if sector in ['GYO', 'Holding', 'Holding / Enerji'] else 21.9
+                graham_multiplier = base_k / (1.0 + expected_inflation)
+            else:
+                expected_inflation = 0.25 # %25 beklenen enflasyon
+                base_k = 11.5 if sector in ['GYO', 'Holding', 'Holding / Enerji'] else 22.5
+                graham_multiplier = base_k / (1.0 + expected_inflation)
             
             if eps > 0 and bvps > 0:
                 fair_graham = np.sqrt(graham_multiplier * eps * bvps)
@@ -528,22 +571,27 @@ def calculate_all_valuations(db):
                 fair_graham = 0.0
                 
             # 2. DCF (Normalize risksiz oran r*)
-            # rf* = pi_hdf (%20) + rho_real (%5) = %25
-            rf_star = 0.25
-            erp_rate = 0.08 # %8 Piyasa Risk Primi
-            delta_weight = 0.03 # Borç cezası ağırlığı
-            
+            if market == "SP500":
+                rf_star = 0.0425 # US 4.25% bond yield
+                erp_rate = 0.05 # 5% ERP
+                delta_weight = 0.01 # lower penalty for US
+            else:
+                rf_star = 0.25
+                erp_rate = 0.08
+                delta_weight = 0.03
+                
             debt_to_equity = stock.debt_to_equity or 0.0
-            
-            # Logaritmik + max(0, ·) borç cezası
             debt_penalty = delta_weight * max(0.0, np.log(1.0 + debt_to_equity))
-            
-            # Tam iskonto oranı (CAPM)
             cost_of_equity = rf_star + (stock.beta or 1.0) * erp_rate + debt_penalty
             
-            if debt_to_equity > 2.0:
-                eps_g *= 0.6
-                rationale_parts.append(f"DİKKAT: Yüksek borç yükü (D/E: {debt_to_equity:.2f}) sebebiyle büyüme beklentisi ve DCF değeri cezalandırıldı.")
+            if market == "SP500":
+                if debt_to_equity > 4.0:
+                    eps_g *= 0.8
+                    rationale_parts.append(f"DİKKAT: Yüksek borç yükü (D/E: {debt_to_equity:.2f}) sebebiyle büyüme beklentisi ve DCF değeri cezalandırıldı.")
+            else:
+                if debt_to_equity > 2.0:
+                    eps_g *= 0.6
+                    rationale_parts.append(f"DİKKAT: Yüksek borç yükü (D/E: {debt_to_equity:.2f}) sebebiyle büyüme beklentisi ve DCF değeri cezalandırıldı.")
                 
             g_decimal = eps_g / 100.0
             
@@ -553,7 +601,6 @@ def calculate_all_valuations(db):
                 fcf *= (1 + g_decimal)
                 dcf_val += fcf / ((1 + cost_of_equity) ** i)
                 
-            # Terminal değer büyüme tavanı
             terminal_growth_cap = 12.0
             terminal_growth_pct = min((eps_g * 0.4), terminal_growth_cap)
             terminal_g = terminal_growth_pct / 100.0
@@ -563,9 +610,20 @@ def calculate_all_valuations(db):
                 dcf_val += terminal_val / ((1 + cost_of_equity) ** 5)
                 
             # 3. Sektörel Çarpan Analizi
-            if sector == 'Havacılık': target_pe = 14.0
-            elif sector == 'Demir-Çelik / Çimento': target_pe = 12.0
-            else: target_pe = 16.0
+            if market == "SP500":
+                if sector == 'Teknoloji': target_pe = 25.0
+                elif sector == 'Perakende': target_pe = 20.0
+                elif sector == 'İletişim / Medya': target_pe = 20.0
+                elif sector == 'Otomotiv': target_pe = 18.0
+                elif sector == 'Finans / Banka': target_pe = 15.0
+                elif sector == 'Holding': target_pe = 14.0
+                elif sector == 'Sağlık': target_pe = 18.0
+                elif sector == 'Enerji': target_pe = 15.0
+                else: target_pe = 16.0
+            else:
+                if sector == 'Havacılık': target_pe = 14.0
+                elif sector == 'Demir-Çelik / Çimento': target_pe = 12.0
+                else: target_pe = 16.0
             
             fair_multiples = eps * target_pe
             
@@ -577,7 +635,7 @@ def calculate_all_valuations(db):
                 intrinsic_avg = fair_graham
                 rationale_parts.append("!!! ŞİRKET ZARAR AÇIKLAMIŞ: Net nakit akışı negatif olduğu için DCF iptal edilmiştir. Son derece yüksek risklidir.")
             else:
-                if sector in ['Aviation', 'Havacılık', 'Teknoloji / Yazılım']:
+                if sector in ['Aviation', 'Havacılık', 'Teknoloji / Yazılım', 'Teknoloji']:
                     weights = {'dcf': 0.6, 'graham': 0.1, 'multiples': 0.3}
                 else:
                     weights = {'dcf': 0.4, 'graham': 0.3, 'multiples': 0.3}
@@ -669,19 +727,34 @@ def calculate_all_valuations(db):
                 rationale_agg_parts.append("Düşük RSI (<45) dipten dönüş sinyaliyle ekstra momentum bonusu uygulandı.")
             rationale_agg = " ".join(rationale_agg_parts)
         else:
-            expected_inflation_agg = 0.15
-            base_k_agg = 11.5 if sector in ['GYO', 'Holding', 'Holding / Enerji'] else 22.5
+            if market == "SP500":
+                expected_inflation_agg = 0.015
+                base_k_agg = 11.2 if sector in ['GYO', 'Holding', 'Holding / Enerji'] else 21.9
+            else:
+                expected_inflation_agg = 0.15
+                base_k_agg = 11.5 if sector in ['GYO', 'Holding', 'Holding / Enerji'] else 22.5
+                
             graham_multiplier_agg = base_k_agg / (1.0 + expected_inflation_agg)
             fair_graham_agg = np.sqrt(graham_multiplier_agg * eps * bvps) if (eps > 0 and bvps > 0) else 0.0
             
-            rf_star_agg = 0.18
+            if market == "SP500":
+                rf_star_agg = 0.035
+                erp_agg = 0.04
+            else:
+                rf_star_agg = 0.18
+                erp_agg = 0.08
+                
             delta_weight_agg = 0.01
             debt_penalty_agg = delta_weight_agg * max(0.0, np.log(1.0 + debt_to_equity))
-            cost_of_equity_agg = rf_star_agg + (stock.beta or 1.0) * 0.08 + debt_penalty_agg
+            cost_of_equity_agg = rf_star_agg + (stock.beta or 1.0) * erp_agg + debt_penalty_agg
             
             eps_g_agg = stock.eps_growth_5y or 25.0
-            if debt_to_equity > 4.0:
-                eps_g_agg *= 0.8
+            if market == "SP500":
+                if debt_to_equity > 4.0:
+                    eps_g_agg *= 0.8
+            else:
+                if debt_to_equity > 4.0:
+                    eps_g_agg *= 0.8
                 
             g_decimal_agg = eps_g_agg / 100.0
             dcf_val_agg = 0.0
@@ -702,7 +775,7 @@ def calculate_all_valuations(db):
                 fair_graham_agg *= 0.5
                 intrinsic_avg_agg = fair_graham_agg
             else:
-                if sector in ['Aviation', 'Havacılık', 'Teknoloji / Yazılım']:
+                if sector in ['Aviation', 'Havacılık', 'Teknoloji / Yazılım', 'Teknoloji']:
                     weights_agg = {'dcf': 0.6, 'graham': 0.1, 'multiples': 0.3}
                 else:
                     weights_agg = {'dcf': 0.4, 'graham': 0.3, 'multiples': 0.3}
@@ -718,7 +791,7 @@ def calculate_all_valuations(db):
             score_agg = max(5, min(95, score_agg))
             
             rationale_agg_parts = []
-            rationale_agg_parts.append(f"Agresif Değerleme: İçsel Değer: {intrinsic_avg_agg:.2f} TL (%50 Temel, %50 Momentum).")
+            rationale_agg_parts.append(f"Agresif Değerleme: İçsel Değer: {intrinsic_avg_agg:.2f} {curr} (%50 Temel, %50 Momentum).")
             if rsi < 45:
                 rationale_agg_parts.append("Turn-around: RSI 45'in altında aşırı satım bölgesinden çıkış potansiyeli ödüllendirildi (+15 Bonus).")
                 
@@ -775,6 +848,7 @@ def calculate_all_valuations(db):
             
         res.name = stock.name
         res.sector = sector
+        res.market = market
         res.is_bist30 = asset.is_bist30 if asset else False
         res.is_bist100 = asset.is_bist100 if asset else False
         res.current_price = float(cur_price)
@@ -804,10 +878,11 @@ def calculate_all_valuations(db):
         db.commit()
     logger.info("Valuation computations successfully completed!")
 
+
 # --- SEEDING METHOD ON STARTUP ---
 
 def init_seed_db():
-    """Seeds BIST stock list on startup by scraping active codes and identifying index types."""
+    """Seeds stock list on startup by scraping BIST active codes and seeding SP500 assets."""
     db = SessionLocal()
     try:
         count = db.query(Asset).count()
@@ -820,13 +895,27 @@ def init_seed_db():
                 asset = Asset(
                     code=code, 
                     name=code, 
+                    market="BIST",
                     is_bist30=is_b30, 
                     is_bist100=is_b100,
                     last_updated=datetime.now()
                 )
                 db.add(asset)
+            
+            logger.info("Seeding SP500 assets...")
+            for code in SP500_LIST:
+                asset = Asset(
+                    code=code,
+                    name=code,
+                    market="SP500",
+                    is_bist30=False,
+                    is_bist100=False,
+                    last_updated=datetime.now()
+                )
+                db.add(asset)
+                
             db.commit()
-            logger.info(f"Seeded {len(tickers)} assets inside SQLite.")
+            logger.info(f"Seeded BIST ({len(tickers)}) and SP500 ({len(SP500_LIST)}) assets inside SQLite.")
             
             # Initial run of calculations in background
             logger.info("Triggering initial sync in background...")
@@ -835,6 +924,7 @@ def init_seed_db():
         logger.error(f"Error during db seeding: {e}")
     finally:
         db.close()
+
 
 async def initial_run_task():
     db = SessionLocal()
@@ -902,6 +992,7 @@ def get_stocks():
                 "ticker": r.ticker.replace(".IS", ""),
                 "name": r.name,
                 "sector": r.sector,
+                "market": r.market,
                 "is_bist30": r.is_bist30,
                 "is_bist100": r.is_bist100,
                 "current_price": r.current_price,
@@ -929,6 +1020,7 @@ def get_stocks():
                 "last_updated": r.last_updated.strftime("%Y-%m-%d %H:%M:%S") if r.last_updated else None
             })
         return data
+
     finally:
         db.close()
 
@@ -1039,17 +1131,22 @@ def remove_ticker(ticker: str):
         db.close()
 
 @app.get("/api/backtest")
-def get_backtest_results():
-    """Reads and returns the historical backtest simulation results."""
+def get_backtest_results(market: str = "BIST"):
+    """Reads and returns the historical backtest simulation results for a specific market."""
     import json
-    file_path = "./data/backtest_results.json"
+    if market.upper() == "SP500":
+        file_path = "./data/backtest_results_sp500.json"
+    else:
+        file_path = "./data/backtest_results.json"
+        
     if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="Backtest results not found. Please run backtest_simulation.py first.")
+        raise HTTPException(status_code=404, detail=f"Backtest results for {market} not found. Please run backtest_simulation.py first.")
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             return json.load(f)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 # Mount Static Files
 app.mount("/", StaticFiles(directory="./static", html=True), name="static")

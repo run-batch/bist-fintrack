@@ -23,9 +23,9 @@ def calculate_rsi(series, period=14):
     return 100 - (100 / (1 + rs))
 
 def get_dss_score(price, eps, bvps, roe, sector, debt_to_equity, beta, eps_growth_5y, close_history, vol_history, idx,
-                  tr_bond_yield=45.0, value_weight=0.7, momentum_weight=0.3, eps_growth_multiplier=1.0):
+                  tr_bond_yield=45.0, value_weight=0.7, momentum_weight=0.3, eps_growth_multiplier=1.0, market="BIST"):
     """
-    Reconstructs the exact BIST Radar intelligence score logic day-by-day.
+    Reconstructs the exact intelligence score logic day-by-day.
     """
     if price <= 0 or eps <= 0:
         return 5  # Floor minimum score
@@ -33,12 +33,16 @@ def get_dss_score(price, eps, bvps, roe, sector, debt_to_equity, beta, eps_growt
     # 1. VALUATION MODELS (FUNDAMENTAL)
     # A. DCF (Discounted Cash Flow)
     TR_BOND_YIELD = tr_bond_yield
-    ERP = 6.0
+    ERP = 5.0 if market == "SP500" else 6.0
     
-    # Apply high leverage penalty if Debt/Equity > 2.0
+    # Apply high leverage penalty based on market standards
     g_rate = eps_growth_5y * eps_growth_multiplier
-    if debt_to_equity > 2.0:
-        g_rate *= 0.6
+    if market == "SP500":
+        if debt_to_equity > 4.0:
+            g_rate *= 0.8
+    else:
+        if debt_to_equity > 2.0:
+            g_rate *= 0.6
         
     g_decimal = g_rate / 100.0
     cost_of_equity = (TR_BOND_YIELD + beta * ERP) / 100.0
@@ -58,30 +62,51 @@ def get_dss_score(price, eps, bvps, roe, sector, debt_to_equity, beta, eps_growt
         dcf_val += terminal_val / ((1 + cost_of_equity) ** 5)
         
     # B. Benjamin Graham Formülü
-    graham_multiplier = 15.0 if sector == 'Banka' else 22.5
+    if market == "SP500":
+        base_k = 11.2 if sector in ['GYO', 'Holding', 'Holding / Enerji'] else 21.9
+        expected_inflation = 0.025 # 2.5% expected inflation
+        graham_multiplier = base_k / (1.0 + expected_inflation)
+    else:
+        graham_multiplier = 15.0 if sector == 'Banka' else 22.5
+        
     if eps > 0 and bvps > 0:
         fair_graham = np.sqrt(graham_multiplier * eps * bvps)
     else:
         fair_graham = 0.0
         
     # C. Sektörel Çarpan Analizi (Multiples)
-    if sector == 'Banka': target_pe = 8.0
-    elif sector == 'Havacılık': target_pe = 14.0
-    elif sector in ['Holding', 'Demir-Çelik / Çimento']: target_pe = 12.0
-    else: target_pe = 16.0
+    if market == "SP500":
+        if sector == 'Teknoloji': target_pe = 25.0
+        elif sector == 'Perakende': target_pe = 20.0
+        elif sector == 'İletişim / Medya': target_pe = 20.0
+        elif sector == 'Otomotiv': target_pe = 18.0
+        elif sector == 'Finans / Banka': target_pe = 15.0
+        elif sector == 'Holding': target_pe = 14.0
+        elif sector == 'Sağlık': target_pe = 18.0
+        elif sector == 'Enerji': target_pe = 15.0
+        else: target_pe = 16.0
+    else:
+        if sector == 'Banka': target_pe = 8.0
+        elif sector == 'Havacılık': target_pe = 14.0
+        elif sector in ['Holding', 'Demir-Çelik / Çimento']: target_pe = 12.0
+        else: target_pe = 16.0
     
     fair_multiples = eps * target_pe
     
     # D. Composite Fair Price
-    if sector == 'Banka':
+    if market != "SP500" and sector == 'Banka':
         weights = {'dcf': 0.1, 'graham': 0.6, 'multiples': 0.3}
-    elif sector in ['Aviation', 'Havacılık', 'Teknoloji / Yazılım']:
+    elif sector in ['Aviation', 'Havacılık', 'Teknoloji / Yazılım', 'Teknoloji']:
         weights = {'dcf': 0.6, 'graham': 0.1, 'multiples': 0.3}
     else:
         weights = {'dcf': 0.4, 'graham': 0.3, 'multiples': 0.3}
         
     intrinsic_avg = (dcf_val * weights['dcf'] + fair_graham * weights['graham'] + fair_multiples * weights['multiples'])
     
+    # Apply valuation discounts for Holdings and REITs
+    if sector in ['GYO', 'Holding', 'Holding / Enerji']:
+        intrinsic_avg *= 0.60
+        
     # E. Value Score based on MOS (Margin of Safety)
     mos = (intrinsic_avg / price) - 1.0
     value_score = int(50 + np.tanh(mos) * 50)
@@ -128,52 +153,78 @@ def get_dss_score(price, eps, bvps, roe, sector, debt_to_equity, beta, eps_growt
     score = int(value_score * value_weight + momentum_score * momentum_weight)
     return max(5, min(95, score))
 
+
 def get_aggressive_score(price, eps, bvps, roe, sector, debt_to_equity, beta, eps_growth_5y, close_history, vol_history, idx,
-                         eps_growth_multiplier=1.5):
+                          eps_growth_multiplier=1.5, market="BIST"):
     """
-    Reconstructs the exact BIST Radar aggressive intelligence score logic day-by-day.
+    Reconstructs the exact aggressive intelligence score logic day-by-day.
     """
     if price <= 0 or eps <= 0:
         return 5
     
-    is_bank_holding = sector in ['Banka']
+    is_bank_holding = (sector == 'Banka') or (market == 'SP500' and sector == 'Finans / Banka' and sector in ['JPM', 'BAC'])
     is_loss_making = (eps <= 0) or (roe < 0)
     
     # 1. VALUATION MODELS (FUNDAMENTAL)
     if is_bank_holding:
         roe_val = roe
-        nim_val = 0.05 + 0.02 * roe_val
-        npl_val = max(0.005, 0.025 - 0.01 * roe_val)
-        syr_val = 0.16 + 0.04 * beta
-        
-        roe_score = min(100.0, max(0.0, (roe_val / 0.40) * 100))
-        nim_score = min(100.0, max(0.0, (nim_val / 0.07) * 100))
-        npl_score = min(100.0, max(0.0, (1.0 - (npl_val - 0.005) / 0.04) * 100))
-        syr_score = min(100.0, max(0.0, ((syr_val - 0.12) / 0.08) * 100))
+        if market == "SP500":
+            nim_val = 0.02 + 0.01 * roe_val
+            npl_val = max(0.002, 0.015 - 0.005 * roe_val)
+            syr_val = 0.12 + 0.02 * beta
+            
+            roe_score = min(100.0, max(0.0, (roe_val / 0.18) * 100))
+            nim_score = min(100.0, max(0.0, (nim_val / 0.04) * 100))
+            npl_score = min(100.0, max(0.0, (1.0 - (npl_val - 0.002) / 0.015) * 100))
+            syr_score = min(100.0, max(0.0, ((syr_val - 0.10) / 0.06) * 100))
+        else:
+            nim_val = 0.05 + 0.02 * roe_val
+            npl_val = max(0.005, 0.025 - 0.01 * roe_val)
+            syr_val = 0.16 + 0.04 * beta
+            
+            roe_score = min(100.0, max(0.0, (roe_val / 0.40) * 100))
+            nim_score = min(100.0, max(0.0, (nim_val / 0.07) * 100))
+            npl_score = min(100.0, max(0.0, (1.0 - (npl_val - 0.005) / 0.04) * 100))
+            syr_score = min(100.0, max(0.0, ((syr_val - 0.12) / 0.08) * 100))
         
         bank_score = int(roe_score * 0.30 + nim_score * 0.25 + npl_score * 0.25 + syr_score * 0.20)
         bank_score = max(5, min(95, bank_score))
         
         value_score = bank_score
     else:
-        # A. Benjamin Graham Formülü (Enflasyon Uyumlu - %15 beklenen enflasyon)
-        expected_inflation_agg = 0.15
-        base_k_agg = 11.5 if sector in ['GYO', 'Holding', 'Holding / Enerji'] else 22.5
+        # A. Benjamin Graham Formülü (Enflasyon Uyumlu)
+        if market == "SP500":
+            expected_inflation_agg = 0.015
+            base_k_agg = 11.2 if sector in ['GYO', 'Holding', 'Holding / Enerji'] else 21.9
+        else:
+            expected_inflation_agg = 0.15
+            base_k_agg = 11.5 if sector in ['GYO', 'Holding', 'Holding / Enerji'] else 22.5
+            
         graham_multiplier_agg = base_k_agg / (1.0 + expected_inflation_agg)
         if eps > 0 and bvps > 0:
             fair_graham_agg = np.sqrt(graham_multiplier_agg * eps * bvps)
         else:
             fair_graham_agg = 0.0
             
-        # B. DCF with lower discount rate (rf* = 18%)
-        rf_star_agg = 0.18
+        # B. DCF with lower discount rate
+        if market == "SP500":
+            rf_star_agg = 0.035
+            erp_agg = 0.04
+        else:
+            rf_star_agg = 0.18
+            erp_agg = 0.08
+            
         delta_weight_agg = 0.01
         debt_penalty_agg = delta_weight_agg * max(0.0, np.log(1.0 + debt_to_equity))
-        cost_of_equity_agg = rf_star_agg + beta * 0.08 + debt_penalty_agg
+        cost_of_equity_agg = rf_star_agg + beta * erp_agg + debt_penalty_agg
         
         eps_g_agg = eps_growth_5y * eps_growth_multiplier
-        if debt_to_equity > 4.0:
-            eps_g_agg *= 0.8
+        if market == "SP500":
+            if debt_to_equity > 4.0:
+                eps_g_agg *= 0.8
+        else:
+            if debt_to_equity > 4.0:
+                eps_g_agg *= 0.8
             
         g_decimal_agg = eps_g_agg / 100.0
         dcf_val_agg = 0.0
@@ -190,9 +241,20 @@ def get_aggressive_score(price, eps, bvps, roe, sector, debt_to_equity, beta, ep
             dcf_val_agg += terminal_val_agg / ((1 + cost_of_equity_agg) ** 5)
             
         # C. Sektörel Çarpan Analizi
-        if sector == 'Havacılık': target_pe = 14.0
-        elif sector == 'Demir-Çelik / Çimento': target_pe = 12.0
-        else: target_pe = 16.0
+        if market == "SP500":
+            if sector == 'Teknoloji': target_pe = 25.0
+            elif sector == 'Perakende': target_pe = 20.0
+            elif sector == 'İletişim / Medya': target_pe = 20.0
+            elif sector == 'Otomotiv': target_pe = 18.0
+            elif sector == 'Finans / Banka': target_pe = 15.0
+            elif sector == 'Holding': target_pe = 14.0
+            elif sector == 'Sağlık': target_pe = 18.0
+            elif sector == 'Enerji': target_pe = 15.0
+            else: target_pe = 16.0
+        else:
+            if sector == 'Havacılık': target_pe = 14.0
+            elif sector == 'Demir-Çelik / Çimento': target_pe = 12.0
+            else: target_pe = 16.0
         fair_multiples = eps * target_pe
         
         if is_loss_making:
@@ -200,7 +262,7 @@ def get_aggressive_score(price, eps, bvps, roe, sector, debt_to_equity, beta, ep
             fair_graham_agg *= 0.5
             intrinsic_avg_agg = fair_graham_agg
         else:
-            if sector in ['Aviation', 'Havacılık', 'Teknoloji / Yazılım']:
+            if sector in ['Aviation', 'Havacılık', 'Teknoloji / Yazılım', 'Teknoloji']:
                 weights_agg = {'dcf': 0.6, 'graham': 0.1, 'multiples': 0.3}
             else:
                 weights_agg = {'dcf': 0.4, 'graham': 0.3, 'multiples': 0.3}
@@ -254,6 +316,7 @@ def get_aggressive_score(price, eps, bvps, roe, sector, debt_to_equity, beta, ep
     score = int(value_score * 0.5 + momentum_score * 0.5)
     return max(5, min(95, score))
 
+
 def load_db_fundamentals():
     """Loads current fundamental parameters for seeded stocks from the local SQLite database."""
     db_path = "./data/bist_fintrack.db"
@@ -266,7 +329,7 @@ def load_db_fundamentals():
     # Query details
     query = """
     SELECT ticker, name, pe_ratio, pb_ratio, ev_ebitda, dividend_yield, 
-           roe, market_cap, beta, eps_growth_5y, trailing_eps, debt_to_equity, sector 
+           roe, market_cap, beta, eps_growth_5y, trailing_eps, debt_to_equity, sector, market 
     FROM stock_fundamentals
     """
     cursor.execute(query)
@@ -287,20 +350,24 @@ def load_db_fundamentals():
             "eps_growth_5y": r[9] or 25.0,
             "trailing_eps": r[10] or 1.0,
             "debt_to_equity": r[11] or 1.0,
-            "sector": r[12] or "Diğer"
+            "sector": r[12] or "Diğer",
+            "market": r[13] if len(r) > 13 else "BIST"
         }
         
     conn.close()
     return fundamentals
 
-def run_single_backtest_scenario(config, db_funds, valid_tickers, stock_data, xu100, trading_dates, start_trading_date):
+
+def run_single_backtest_scenario(config, db_funds, valid_tickers, stock_data, xu100, trading_dates, start_trading_date, market="BIST"):
     """Runs a single portfolio backtest simulation using the provided configuration parameters."""
-    initial_capital = 100000.0  # 100,000 TRY
+    initial_capital = 100000.0  # 100,000 TRY or USD
     cash = initial_capital
     holdings = {t: 0.0 for t in valid_tickers}
     entry_prices = {t: 0.0 for t in valid_tickers}
     buy_dates = {t: None for t in valid_tickers}
     max_holding_drawdown = {t: 0.0 for t in valid_tickers}
+    peak_prices = {t: 0.0 for t in valid_tickers} # Track peak price achieved since purchase
+    curr = "$" if market == "SP500" else "TL"
     
     # Parameters from config
     BUY_SCORE_THRESHOLD = config["buy_threshold"]
@@ -314,10 +381,23 @@ def run_single_backtest_scenario(config, db_funds, valid_tickers, stock_data, xu
     momentum_weight = config["momentum_weight"]
     eps_growth_multiplier = config["eps_growth_multiplier"]
     
+    # Extract learning/adaptive flags from configuration
+    TRAILING_STOP = config.get("trailing_stop", False)
+    DYNAMIC_TP = config.get("dynamic_tp", False)
+    INDEX_SHIELD = config.get("index_shield", False)
+    ADAPTIVE_ALLOC = config.get("adaptive_alloc", False)
+    
     closed_trades = []
     daily_portfolio_value = []
     
-    print(f"\n{CLR_CYAN}{CLR_BOLD}--- [SİMÜLASYON BAŞLADI: {config['name'].upper()}] ---{CLR_RESET}")
+    try:
+        print(f"\n{CLR_CYAN}{CLR_BOLD}--- [SİMÜLASYON BAŞLADI: {config['name'].upper()} ({market})] ---{CLR_RESET}")
+    except UnicodeEncodeError:
+        # Strip non-ASCII characters / emojis for safe console printing on Windows terminals
+        safe_name = config['name'].replace("✨ ", "").replace("⚡ ", "").replace("🏆 ", "")
+        # replace Turkish characters to be extremely safe if CP1254 maps fail
+        safe_name = safe_name.replace("ı", "i").replace("Ş", "S").replace("ş", "s").replace("ğ", "g").replace("Ğ", "G").replace("ü", "u").replace("Ü", "U").replace("ö", "o").replace("Ö", "O").replace("ç", "c").replace("Ç", "C")
+        print(f"\n{CLR_CYAN}{CLR_BOLD}--- [SIMULASYON BASLADI: {safe_name.upper()} ({market})] ---{CLR_RESET}")
     
     # Day-by-Day Simulation Loop
     for date_idx, current_date in enumerate(trading_dates):
@@ -342,68 +422,20 @@ def run_single_backtest_scenario(config, db_funds, valid_tickers, stock_data, xu
                     
         daily_portfolio_value.append({'date': current_date, 'value': portfolio_val})
         
-        # B. Check Stop-Loss and Take-Profit for active holdings
-        for t in valid_tickers:
-            if holdings[t] > 0.0:
-                p_close = current_prices[t]
-                entry_p = entry_prices[t]
-                
-                # Update Max Drawdown while holding
-                if p_close < entry_p:
-                    drawdown = (entry_p - p_close) / entry_p
-                    max_holding_drawdown[t] = max(max_holding_drawdown[t], drawdown)
-                
-                # Check Stop-Loss
-                if p_close <= entry_p * (1 - STOP_LOSS_PCT):
-                    cash_gained = holdings[t] * p_close
-                    cash += cash_gained
-                    
-                    ret_pct = -STOP_LOSS_PCT
-                    closed_trades.append({
-                        'ticker': t.replace('.IS', ''),
-                        'buy_date': buy_dates[t].strftime('%Y-%m-%d'),
-                        'buy_price': entry_p,
-                        'sell_date': current_date.strftime('%Y-%m-%d'),
-                        'sell_price': p_close,
-                        'return_pct': ret_pct * 100,
-                        'type': 'STOP-LOSS',
-                        'max_drawdown': max_holding_drawdown[t] * 100,
-                        'incorrect_decision': True
-                    })
-                    
-                    print(f"  [{CLR_RED}STOP-LOSS{CLR_RESET}] {current_date.strftime('%Y-%m-%d')} | {t.replace('.IS', ''):6} satıldı! Fiyat: {p_close:7.2f} TL (Maliyet: {entry_p:.2f} TL, Net: %{ret_pct*100:.1f})")
-                    holdings[t] = 0.0
-                    entry_prices[t] = 0.0
-                    buy_dates[t] = None
-                    max_holding_drawdown[t] = 0.0
-                    continue
-                    
-                # Check Take-Profit
-                elif p_close >= entry_p * (1 + TAKE_PROFIT_PCT):
-                    cash_gained = holdings[t] * p_close
-                    cash += cash_gained
-                    
-                    ret_pct = (p_close - entry_p) / entry_p
-                    closed_trades.append({
-                        'ticker': t.replace('.IS', ''),
-                        'buy_date': buy_dates[t].strftime('%Y-%m-%d'),
-                        'buy_price': entry_p,
-                        'sell_date': current_date.strftime('%Y-%m-%d'),
-                        'sell_price': p_close,
-                        'return_pct': ret_pct * 100,
-                        'type': 'TAKE-PROFIT',
-                        'max_drawdown': max_holding_drawdown[t] * 100,
-                        'incorrect_decision': False
-                    })
-                    
-                    print(f"  [{CLR_GREEN}TAKE-PROFIT{CLR_RESET}] {current_date.strftime('%Y-%m-%d')} | {t.replace('.IS', ''):6} satıldı! Fiyat: {p_close:7.2f} TL (Maliyet: {entry_p:.2f} TL, Net: %{ret_pct*100:.1f})")
-                    holdings[t] = 0.0
-                    entry_prices[t] = 0.0
-                    buy_dates[t] = None
-                    max_holding_drawdown[t] = 0.0
-                    continue
-        
-        # C. Re-evaluate Score Signals (Only perform 1 action per stock per day)
+        # A.2. Calculate Index Trend if INDEX_SHIELD is active
+        index_trend_neg = False
+        if INDEX_SHIELD:
+            if current_date in xu100.index:
+                idx_idx = xu100.index.get_loc(current_date)
+                if idx_idx >= 20:
+                    prev_index_prices = xu100['Close'].iloc[idx_idx-20 : idx_idx+1]
+                    index_sma20 = prev_index_prices.mean()
+                    index_cur = float(xu100['Close'].iloc[idx_idx])
+                    if index_cur < index_sma20:
+                        index_trend_neg = True
+
+        # A.3. Pre-calculate Daily Scores for all tickers on this day
+        daily_scores = {}
         for t in valid_tickers:
             df_t = stock_data[t]
             if current_date not in df_t.index or current_prices[t] <= 0:
@@ -419,7 +451,7 @@ def run_single_backtest_scenario(config, db_funds, valid_tickers, stock_data, xu
             fund = db_funds[t]
             
             # Reconstruct Daily Zeka Skoru with custom strategy params
-            if config["id"] == "aggressive_ai":
+            if config["id"] in ["aggressive_ai", "autopsy_volmom"]:
                 score = get_aggressive_score(
                     price=p_close,
                     eps=fund["trailing_eps"],
@@ -432,7 +464,8 @@ def run_single_backtest_scenario(config, db_funds, valid_tickers, stock_data, xu
                     close_history=df_t['Close'],
                     vol_history=df_t['Volume'],
                     idx=idx_in_history,
-                    eps_growth_multiplier=eps_growth_multiplier
+                    eps_growth_multiplier=eps_growth_multiplier,
+                    market=market
                 )
             else:
                 score = get_dss_score(
@@ -450,8 +483,116 @@ def run_single_backtest_scenario(config, db_funds, valid_tickers, stock_data, xu
                     tr_bond_yield=tr_bond_yield,
                     value_weight=value_weight,
                     momentum_weight=momentum_weight,
-                    eps_growth_multiplier=eps_growth_multiplier
+                    eps_growth_multiplier=eps_growth_multiplier,
+                    market=market
                 )
+            daily_scores[t] = score
+
+        # Update peak prices for active holdings
+        for t in valid_tickers:
+            if holdings[t] > 0.0 and current_prices[t] > peak_prices[t]:
+                peak_prices[t] = current_prices[t]
+        
+        # B. Check Stop-Loss and Take-Profit for active holdings
+        for t in valid_tickers:
+            if holdings[t] > 0.0:
+                p_close = current_prices[t]
+                if p_close <= 0.0:
+                    continue
+                entry_p = entry_prices[t]
+                score = daily_scores.get(t, 50)
+                
+                # Update Max Drawdown while holding
+                if p_close < entry_p:
+                    drawdown = (entry_p - p_close) / entry_p
+                    max_holding_drawdown[t] = max(max_holding_drawdown[t], drawdown)
+                
+                # Sektörel Stop-Loss Kalibrasyonu
+                fund = db_funds[t]
+                sec_lower = fund.get("sector", "Diğer").lower()
+                current_sl_pct = STOP_LOSS_PCT
+                if config["id"] in ["autopsy_volmom", "aggressive_ai"]:
+                    if any(x in sec_lower for x in ["teknoloji", "yazılım", "tech", "software", "enerji", "energy"]):
+                        current_sl_pct = 0.08  # Tighten standard SL for volatile assets
+                
+                # Determine Stop Price (Trailing vs. Entry-based)
+                if TRAILING_STOP:
+                    stop_price = peak_prices[t] * (1 - current_sl_pct)
+                else:
+                    stop_price = entry_p * (1 - current_sl_pct)
+                
+                # Check Stop-Loss
+                if p_close <= stop_price:
+                    cash_gained = holdings[t] * p_close
+                    cash += cash_gained
+                    
+                    ret_pct = (p_close - entry_p) / entry_p
+                    closed_trades.append({
+                        'ticker': t.replace('.IS', ''),
+                        'buy_date': buy_dates[t].strftime('%Y-%m-%d'),
+                        'buy_price': entry_p,
+                        'sell_date': current_date.strftime('%Y-%m-%d'),
+                        'sell_price': p_close,
+                        'return_pct': ret_pct * 100,
+                        'type': 'STOP-LOSS',
+                        'max_drawdown': max_holding_drawdown[t] * 100,
+                        'incorrect_decision': (ret_pct < 0.0)
+                    })
+                    
+                    print(f"  [{CLR_RED}STOP-LOSS{CLR_RESET}] {current_date.strftime('%Y-%m-%d')} | {t.replace('.IS', ''):6} satıldı! Fiyat: {p_close:7.2f} {curr} (Maliyet: {entry_p:.2f} {curr}, Net: %{ret_pct*100:.1f})")
+                    holdings[t] = 0.0
+                    entry_prices[t] = 0.0
+                    buy_dates[t] = None
+                    max_holding_drawdown[t] = 0.0
+                    peak_prices[t] = 0.0
+                    continue
+                    
+                # Check Take-Profit
+                elif p_close >= entry_p * (1 + TAKE_PROFIT_PCT):
+                    if DYNAMIC_TP and score >= 68:
+                        # Yapay Zeka skoru çok yüksek olduğu için kazananın koşmasına izin ver, kâr alma!
+                        continue
+                        
+                    cash_gained = holdings[t] * p_close
+                    cash += cash_gained
+                    
+                    ret_pct = (p_close - entry_p) / entry_p
+                    closed_trades.append({
+                        'ticker': t.replace('.IS', ''),
+                        'buy_date': buy_dates[t].strftime('%Y-%m-%d'),
+                        'buy_price': entry_p,
+                        'sell_date': current_date.strftime('%Y-%m-%d'),
+                        'sell_price': p_close,
+                        'return_pct': ret_pct * 100,
+                        'type': 'TAKE-PROFIT',
+                        'max_drawdown': max_holding_drawdown[t] * 100,
+                        'incorrect_decision': False
+                    })
+                    
+                    print(f"  [{CLR_GREEN}TAKE-PROFIT{CLR_RESET}] {current_date.strftime('%Y-%m-%d')} | {t.replace('.IS', ''):6} satıldı! Fiyat: {p_close:7.2f} {curr} (Maliyet: {entry_p:.2f} {curr}, Net: %{ret_pct*100:.1f})")
+                    holdings[t] = 0.0
+                    entry_prices[t] = 0.0
+                    buy_dates[t] = None
+                    max_holding_drawdown[t] = 0.0
+                    peak_prices[t] = 0.0
+                    continue
+        
+        # C. Re-evaluate Score Signals (Only perform 1 action per stock per day)
+        for t in valid_tickers:
+            if current_prices[t] <= 0 or t not in daily_scores:
+                continue
+                
+            p_close = current_prices[t]
+            score = daily_scores[t]
+            
+            fund = db_funds[t]
+            sec_lower = fund.get("sector", "Diğer").lower()
+            
+            # Sektörel SL Belirle (IDR kontrolü için)
+            current_sl_pct = STOP_LOSS_PCT
+            if config["id"] in ["autopsy_volmom", "aggressive_ai"]:
+                if any(x in sec_lower for x in ["teknoloji", "yazılım", "tech", "software", "enerji", "energy"]):
+                    current_sl_pct = 0.08
             
             # DECISION RULE:
             # 1. SELL: Hold stock, and score <= SELL_SCORE_THRESHOLD
@@ -461,7 +602,8 @@ def run_single_backtest_scenario(config, db_funds, valid_tickers, stock_data, xu
                 cash += cash_gained
                 
                 ret_pct = (p_close - entry_p) / entry_p
-                incorrect = (ret_pct < 0.0) or (max_holding_drawdown[t] >= 0.05)
+                # Robust IDR threshold logic: must close in net loss OR trigger SL limit drawdown
+                incorrect = (ret_pct < 0.0) or (max_holding_drawdown[t] >= current_sl_pct)
                 
                 closed_trades.append({
                     'ticker': t.replace('.IS', ''),
@@ -476,27 +618,91 @@ def run_single_backtest_scenario(config, db_funds, valid_tickers, stock_data, xu
                 })
                 
                 log_color = CLR_GREEN if ret_pct >= 0 else CLR_RED
-                print(f"  [SİNYAL SATIŞ] {current_date.strftime('%Y-%m-%d')} | {t.replace('.IS', ''):6} satıldı! Fiyat: {p_close:7.2f} TL (Zeka Skoru: {score:2}, Getiri: {log_color}%{ret_pct*100:.1f}{CLR_RESET}, Max Geri: %{max_holding_drawdown[t]*100:.1f})")
+                print(f"  [SİNYAL SATIŞ] {current_date.strftime('%Y-%m-%d')} | {t.replace('.IS', ''):6} satıldı! Fiyat: {p_close:7.2f} {curr} (Zeka Skoru: {score:2}, Getiri: {log_color}%{ret_pct*100:.1f}{CLR_RESET}, Max Geri: %{max_holding_drawdown[t]*100:.1f})")
                 
                 holdings[t] = 0.0
                 entry_prices[t] = 0.0
                 buy_dates[t] = None
                 max_holding_drawdown[t] = 0.0
+                peak_prices[t] = 0.0
                 
-            # 2. BUY: Do not hold stock, cash is available, and score >= BUY_SCORE_THRESHOLD
-            elif holdings[t] == 0.0 and score >= BUY_SCORE_THRESHOLD:
-                # Allocate 20% of total portfolio value
-                investment = min(cash, portfolio_val * ALLOCATION_PCT)
-                if investment >= 1000.0:  # must be a meaningful amount (at least 1,000 TL)
-                    shares = investment / p_close
-                    cash -= investment
+            # 2. BUY: Do not hold stock, cash is available, and score >= BUY_SCORE_THRESHOLD (Index-Shield-Adjusted)
+            elif holdings[t] == 0.0:
+                # Sektörel İnce Ayarlar (Dynamic Sector Calibration)
+                sector_buy_adjust = 0
+                if config["id"] in ["autopsy_volmom", "aggressive_ai"]:
+                    # Kararlı ve Trendi Sağlam Sektörler
+                    if any(x in sec_lower for x in ["savunma", "telekom", "otomotiv", "defense", "telecom", "automotive"]):
+                        sector_buy_adjust = -2 # Barajı esnet
+                    # Volatilitesi ve Hata Riski Yüksek Sektörler
+                    elif any(x in sec_lower for x in ["teknoloji", "yazılım", "tech", "software", "enerji", "energy"]):
+                        sector_buy_adjust = 3  # Barajı sıkılaştır
+                    # GYO ve Holding iştirak NAV iskontolu yapılar
+                    elif any(x in sec_lower for x in ["gyo", "reit", "holding"]):
+                        sector_buy_adjust = 2  # Barajı yükselt
+                
+                current_buy_threshold = BUY_SCORE_THRESHOLD + sector_buy_adjust
+                if index_trend_neg:
+                    current_buy_threshold += 5 # Downtrend kalkanı
                     
-                    holdings[t] = shares
-                    entry_prices[t] = p_close
-                    buy_dates[t] = current_date
-                    max_holding_drawdown[t] = 0.0
+                # Patern Algılama Kalkanları (Pattern Detection Shields)
+                pattern_blocked = False
+                if config["id"] in ["autopsy_volmom", "aggressive_ai"]:
+                    # 1. Hacim Tükeniş Kalkanı (Blowoff Volume Check)
+                    df_t = stock_data[t]
+                    idx_in_history = df_t.index.get_loc(current_date)
+                    vol_so_far = df_t['Volume'].iloc[:idx_in_history+1]
+                    if len(vol_so_far) >= 21:
+                        v_day = float(vol_so_far.iloc[-1])
+                        v_avg = float(vol_so_far.iloc[-21:-1].mean())
+                        vol_ratio = v_day / (v_avg + 1e-9)
+                        if vol_ratio > 3.5:
+                            pattern_blocked = True
                     
-                    print(f"  [{CLR_CYAN}SİNYAL ALIŞ {CLR_RESET}] {current_date.strftime('%Y-%m-%d')} | {t.replace('.IS', ''):6} alındı!  Fiyat: {p_close:7.2f} TL (Zeka Skoru: {score:2}, Bütçe: {investment:.2f} TL)")
+                    # 2. Köpük Kalkanı (SMA100 Bubble Shield)
+                    close_so_far = df_t['Close'].iloc[:idx_in_history+1]
+                    if len(close_so_far) >= 100:
+                        sma100 = float(close_so_far.iloc[-100:].mean())
+                        bubble_ratio = p_close / (sma100 + 1e-9)
+                        if bubble_ratio > 1.25:
+                            pattern_blocked = True
+                            
+                    # 3. RSI Eğim Teyidi (RSI Slope Check)
+                    if len(close_so_far) >= 20:
+                        rsi_series = calculate_rsi(close_so_far)
+                        if len(rsi_series) >= 4:
+                            rsi_today = float(rsi_series.iloc[-1])
+                            rsi_prev = float(rsi_series.iloc[-4])
+                            rsi_slope = rsi_today - rsi_prev
+                            if rsi_slope < 0.0:
+                                pattern_blocked = True
+                
+                if score >= current_buy_threshold:
+                    if pattern_blocked:
+                        continue # Pattern shield block active
+                        
+                    # Adaptive Capital Allocation based on conviction
+                    current_alloc = ALLOCATION_PCT
+                    if ADAPTIVE_ALLOC:
+                        if score >= 85:
+                            current_alloc = 0.25 # Overweight
+                        elif score >= 75:
+                            current_alloc = 0.20
+                        else:
+                            current_alloc = 0.15 # Underweight
+                            
+                    investment = min(cash, portfolio_val * current_alloc)
+                    if investment >= 1000.0:  # must be a meaningful amount
+                        shares = investment / p_close
+                        cash -= investment
+                        
+                        holdings[t] = shares
+                        entry_prices[t] = p_close
+                        peak_prices[t] = p_close
+                        buy_dates[t] = current_date
+                        max_holding_drawdown[t] = 0.0
+                        
+                        print(f"  [SİNYAL ALIŞ ] {current_date.strftime('%Y-%m-%d')} | {t.replace('.IS', ''):6} alındı!  Fiyat: {p_close:7.2f} {curr} (Zeka Skoru: {score:2}, Bütçe: {investment:.2f} {curr})")
 
     # Finalize Open Positions at last available prices
     last_date = trading_dates[-1]
@@ -509,9 +715,16 @@ def run_single_backtest_scenario(config, db_funds, valid_tickers, stock_data, xu
             cash_gained = holdings[t] * p_final
             final_portfolio_val += cash_gained
             
+            fund = db_funds[t]
+            sec_lower = fund.get("sector", "Diğer").lower()
+            current_sl_pct = STOP_LOSS_PCT
+            if config["id"] in ["autopsy_volmom", "aggressive_ai"]:
+                if any(x in sec_lower for x in ["teknoloji", "yazılım", "tech", "software", "enerji", "energy"]):
+                    current_sl_pct = 0.08
+            
             entry_p = entry_prices[t]
             ret_pct = (p_final - entry_p) / entry_p
-            incorrect = (ret_pct < 0.0) or (max_holding_drawdown[t] >= 0.05)
+            incorrect = (ret_pct < 0.0) or (max_holding_drawdown[t] >= current_sl_pct)
             
             closed_trades.append({
                 'ticker': t.replace('.IS', ''),
@@ -526,7 +739,7 @@ def run_single_backtest_scenario(config, db_funds, valid_tickers, stock_data, xu
             })
             holdings[t] = 0.0
 
-    # Calculate Benchmark Index XU100 Return
+    # Calculate Benchmark Index Return
     xu100_start_price = float(xu100[xu100.index >= pd.to_datetime(start_trading_date)].iloc[0]['Close'])
     xu100_end_price = float(xu100.iloc[-1]['Close'])
     xu100_return_pct = (xu100_end_price / xu100_start_price - 1) * 100
@@ -568,9 +781,9 @@ def run_single_backtest_scenario(config, db_funds, valid_tickers, stock_data, xu
         "trades": closed_trades
     }
 
-def run_historical_backtest():
+def execute_market_backtest(market="BIST"):
     print(f"\n{CLR_CYAN}{CLR_BOLD}==========================================================================")
-    print("      BIST RADAR KARAR DESTEK VE GERİYE DÖNÜK SİMÜLASYON MOTORU (365 GÜN)")
+    print(f"      {market} FinTrack Karar Destek ve Geriye Dönük Simülasyon Raporu")
     print(f"=========================================================================={CLR_RESET}\n")
     
     # 1. Load Tickers from DB
@@ -581,18 +794,31 @@ def run_historical_backtest():
         print(f"{CLR_RED}[HATA] Veritabanı okunurken hata oluştu: {e}{CLR_RESET}")
         return
 
-    # Select representative major BIST stocks from different sectors to backtest
-    test_tickers = [
-        "THYAO.IS", "GARAN.IS", "EREGL.IS", "BIMAS.IS", "KCHOL.IS", 
-        "TUPRS.IS", "ASELS.IS", "SASA.IS", "SISE.IS", "AKBNK.IS",
-        "ASTOR.IS", "DOAS.IS"
-    ]
-    
+    # Select representative major BIST or SP500 stocks
+    if market == "SP500":
+        test_tickers = [
+            "AAPL", "MSFT", "NVDA", "AMZN", "META", "GOOGL", "TSLA", "BRK-B", "LLY", "AVGO", "JPM", "UNH"
+        ]
+        benchmark_ticker = "^GSPC"
+        output_file = "./data/backtest_results_sp500.json"
+        curr = "$"
+    else:
+        test_tickers = [
+            "THYAO.IS", "GARAN.IS", "EREGL.IS", "BIMAS.IS", "KCHOL.IS", 
+            "TUPRS.IS", "ASELS.IS", "SASA.IS", "SISE.IS", "AKBNK.IS",
+            "ASTOR.IS", "DOAS.IS"
+        ]
+        benchmark_ticker = "XU100.IS"
+        output_file = "./data/backtest_results.json"
+        curr = "TL"
+        
     # Verify tickers exist in database
     tickers = [t for t in test_tickers if t in db_funds]
     if not tickers:
         print(f"{CLR_YELLOW}[UYARI] Belirlenen test hisseleri veritabanında bulunamadı. DB'den ilk 10 hisse alınıyor...{CLR_RESET}")
-        tickers = list(db_funds.keys())[:10]
+        tickers = [t for t, f in db_funds.items() if f.get("market", "BIST") == market][:10]
+        if not tickers:
+            tickers = list(db_funds.keys())[:10]
         
     print(f"[Simülasyon] Test Grubu Hisseleri: {', '.join([t.replace('.IS', '') for t in tickers])}")
     
@@ -605,7 +831,7 @@ def run_historical_backtest():
     print(f"[Tarih] Gösterge Tampon Başlangıcı: {start_download_date.strftime('%Y-%m-%d')}")
     
     # 2. Download Price History once for high performance
-    print("\n[yfinance] Tarihsel hisse fiyatları indiriliyor...")
+    print(f"\n[yfinance] Tarihsel hisse fiyatları indiriliyor ({market})...")
     stock_data = {}
     
     for t in tickers:
@@ -624,72 +850,168 @@ def run_historical_backtest():
         print(f"{CLR_RED}[HATA] Hiçbir hisse için fiyat verisi indirilemedi. Test durduruldu.{CLR_RESET}")
         return
         
-    # Download Benchmark Index XU100.IS once
-    print("  > XU100 (BIST 100 Endeksi) verisi indiriliyor...")
-    xu100 = yf.download("XU100.IS", start=start_download_date.strftime('%Y-%m-%d'), end=end_date.strftime('%Y-%m-%d'), interval="1d", progress=False)
+    # Download Benchmark Index
+    print(f"  > {benchmark_ticker} (Endeks) verisi indiriliyor...")
+    xu100 = yf.download(benchmark_ticker, start=start_download_date.strftime('%Y-%m-%d'), end=end_date.strftime('%Y-%m-%d'), interval="1d", progress=False)
     xu_close = xu100['Close'].squeeze()
     xu100 = pd.DataFrame({'Close': xu_close})
         
     # Align Trading Dates
     df_ref = stock_data[valid_tickers[0]]
     trading_dates = df_ref[df_ref.index >= pd.to_datetime(start_trading_date)].index
-    print(f"\n[Analiz] Toplam işlem yapılacak iş günü sayısı: {len(trading_dates)} gün.")
-    
-    # 3. Define 4 Backtesting Strategies
-    scenarios_config = [
-        {
-            "id": "conservative",
-            "name": "Muhafazakar Klasik",
-            "buy_threshold": 75,
-            "sell_threshold": 45,
-            "tr_bond_yield": 45.0,        # conservative high bond rate
-            "value_weight": 0.70,
-            "momentum_weight": 0.30,
-            "eps_growth_multiplier": 1.0, # seeded growth
-            "stop_loss_pct": 0.10,
-            "take_profit_pct": 0.30,
-            "allocation_pct": 0.20
-        },
-        {
-            "id": "balanced",
-            "name": "Enflasyon Dengeli (Önerilen)",
-            "buy_threshold": 70,          # moderately lower threshold for wider coverage
-            "sell_threshold": 45,
-            "tr_bond_yield": 35.0,        # 35% discount yield (takes tax shelter & nominal buffer)
-            "value_weight": 0.60,
-            "momentum_weight": 0.40,
-            "eps_growth_multiplier": 1.3, # 1.3x nominal growth adjustment (high inflation adaptation)
-            "stop_loss_pct": 0.10,
-            "take_profit_pct": 0.30,
-            "allocation_pct": 0.20
-        },
-        {
-            "id": "active",
-            "name": "Aktif Taktik Momentum",
-            "buy_threshold": 65,          # tactical coverage
-            "sell_threshold": 40,
-            "tr_bond_yield": 30.0,        # 30% discount rate
-            "value_weight": 0.50,
-            "momentum_weight": 0.50,      # balanced fundamental & momentum weight
-            "eps_growth_multiplier": 1.5, # 1.5x nominal growth adaptation
-            "stop_loss_pct": 0.10,
-            "take_profit_pct": 0.30,
-            "allocation_pct": 0.20
-        },
-        {
-            "id": "aggressive_ai",
-            "name": "Agresif Zeka Modeli",
-            "buy_threshold": 65,
-            "sell_threshold": 40,
-            "tr_bond_yield": 25.0,
-            "value_weight": 0.50,
-            "momentum_weight": 0.50,
-            "eps_growth_multiplier": 1.5,
-            "stop_loss_pct": 0.10,
-            "take_profit_pct": 0.35,      # higher take-profit for aggressive run
-            "allocation_pct": 0.20
-        }
-    ]
+        # 3. Define Backtesting Strategies (calibrated for US or BIST)
+    if market == "SP500":
+        scenarios_config = [
+            {
+                "id": "autopsy_volmom",
+                "name": "✨ YZ Otopsi-VOLMOM (Şampiyon)",
+                "buy_threshold": 68,
+                "sell_threshold": 40,
+                "tr_bond_yield": 3.5,
+                "value_weight": 0.40,
+                "momentum_weight": 0.60,
+                "eps_growth_multiplier": 1.2,
+                "stop_loss_pct": 0.08,
+                "take_profit_pct": 0.25,
+                "allocation_pct": 0.20,
+                "trailing_stop": True,
+                "dynamic_tp": True,
+                "index_shield": True,
+                "adaptive_alloc": True
+            },
+            {
+                "id": "conservative",
+                "name": "Muhafazakar Klasik",
+                "buy_threshold": 75,
+                "sell_threshold": 45,
+                "tr_bond_yield": 4.25,        # US 4.25% bond yield
+                "value_weight": 0.70,
+                "momentum_weight": 0.30,
+                "eps_growth_multiplier": 1.0,
+                "stop_loss_pct": 0.08,        # tighter stop-loss for lower volatility US market
+                "take_profit_pct": 0.20,
+                "allocation_pct": 0.20
+            },
+            {
+                "id": "balanced",
+                "name": "Enflasyon Dengeli (Önerilen)",
+                "buy_threshold": 70,
+                "sell_threshold": 45,
+                "tr_bond_yield": 3.75,
+                "value_weight": 0.60,
+                "momentum_weight": 0.40,
+                "eps_growth_multiplier": 1.1,
+                "stop_loss_pct": 0.08,
+                "take_profit_pct": 0.25,
+                "allocation_pct": 0.20
+            },
+            {
+                "id": "active",
+                "name": "Aktif Taktik Momentum",
+                "buy_threshold": 65,
+                "sell_threshold": 40,
+                "tr_bond_yield": 3.5,
+                "value_weight": 0.50,
+                "momentum_weight": 0.50,
+                "eps_growth_multiplier": 1.2,
+                "stop_loss_pct": 0.10,
+                "take_profit_pct": 0.30,
+                "allocation_pct": 0.20
+            },
+            {
+                "id": "aggressive_ai",
+                "name": "Agresif Zeka Modeli",
+                "buy_threshold": 65,
+                "sell_threshold": 40,
+                "tr_bond_yield": 3.25,
+                "value_weight": 0.50,
+                "momentum_weight": 0.50,
+                "eps_growth_multiplier": 1.2,
+                "stop_loss_pct": 0.10,
+                "take_profit_pct": 0.35,
+                "allocation_pct": 0.20,
+                "trailing_stop": True,
+                "dynamic_tp": True,
+                "index_shield": False,
+                "adaptive_alloc": True
+            }
+        ]
+    else:
+        scenarios_config = [
+            {
+                "id": "autopsy_volmom",
+                "name": "✨ YZ Otopsi-VOLMOM (Şampiyon)",
+                "buy_threshold": 68,
+                "sell_threshold": 40,
+                "tr_bond_yield": 30.0,
+                "value_weight": 0.40,
+                "momentum_weight": 0.60,
+                "eps_growth_multiplier": 1.4,
+                "stop_loss_pct": 0.10,
+                "take_profit_pct": 0.30,
+                "allocation_pct": 0.20,
+                "trailing_stop": True,
+                "dynamic_tp": True,
+                "index_shield": True,
+                "adaptive_alloc": True
+            },
+            {
+                "id": "conservative",
+                "name": "Muhafazakar Klasik",
+                "buy_threshold": 75,
+                "sell_threshold": 45,
+                "tr_bond_yield": 45.0,
+                "value_weight": 0.70,
+                "momentum_weight": 0.30,
+                "eps_growth_multiplier": 1.0,
+                "stop_loss_pct": 0.10,
+                "take_profit_pct": 0.30,
+                "allocation_pct": 0.20
+            },
+            {
+                "id": "balanced",
+                "name": "Enflasyon Dengeli (Önerilen)",
+                "buy_threshold": 70,
+                "sell_threshold": 45,
+                "tr_bond_yield": 35.0,
+                "value_weight": 0.60,
+                "momentum_weight": 0.40,
+                "eps_growth_multiplier": 1.3,
+                "stop_loss_pct": 0.10,
+                "take_profit_pct": 0.30,
+                "allocation_pct": 0.20
+            },
+            {
+                "id": "active",
+                "name": "Aktif Taktik Momentum",
+                "buy_threshold": 65,
+                "sell_threshold": 40,
+                "tr_bond_yield": 30.0,
+                "value_weight": 0.50,
+                "momentum_weight": 0.50,
+                "eps_growth_multiplier": 1.5,
+                "stop_loss_pct": 0.10,
+                "take_profit_pct": 0.30,
+                "allocation_pct": 0.20
+            },
+            {
+                "id": "aggressive_ai",
+                "name": "Agresif Zeka Modeli",
+                "buy_threshold": 65,
+                "sell_threshold": 40,
+                "tr_bond_yield": 25.0,
+                "value_weight": 0.50,
+                "momentum_weight": 0.50,
+                "eps_growth_multiplier": 1.5,
+                "stop_loss_pct": 0.10,
+                "take_profit_pct": 0.35,
+                "allocation_pct": 0.20,
+                "trailing_stop": True,
+                "dynamic_tp": True,
+                "index_shield": False,
+                "adaptive_alloc": True
+            }
+        ]
     
     results = {}
     for config in scenarios_config:
@@ -700,12 +1022,13 @@ def run_historical_backtest():
             stock_data=stock_data,
             xu100=xu100,
             trading_dates=trading_dates,
-            start_trading_date=start_trading_date
+            start_trading_date=start_trading_date,
+            market=market
         )
         
     # 4. PRINT SIDE-BY-SIDE STRATEGY COMPARISON REPORT
     print(f"\n{CLR_CYAN}{CLR_BOLD}==========================================================================================")
-    print("                    STRATEJİ KARŞILAŞTIRMA VE PERFORMANS RAPORU                           ")
+    print(f"                    {market} STRATEJİ KARŞILAŞTIRMA VE PERFORMANS RAPORU                           ")
     print(f"=========================================================================={CLR_RESET}")
     print(f"  Metrik                       | Muhafazakar Klasik | Enflasyon Dengeli  | Aktif Taktik Momentum")
     print("-" * 90)
@@ -714,15 +1037,15 @@ def run_historical_backtest():
     b = results["balanced"]
     a = results["active"]
     
-    print(f"  Başlangıç Kapitali           | {c['initial_capital']:,.2f} TRY   | {b['initial_capital']:,.2f} TRY   | {a['initial_capital']:,.2f} TRY")
-    print(f"  Final Portföy Değeri         | {c['final_value']:,.2f} TRY   | {b['final_value']:,.2f} TRY   | {a['final_value']:,.2f} TRY")
+    print(f"  Başlangıç Kapitali           | {c['initial_capital']:,.2f} {curr}   | {b['initial_capital']:,.2f} {curr}   | {a['initial_capital']:,.2f} {curr}")
+    print(f"  Final Portföy Değeri         | {c['final_value']:,.2f} {curr}   | {b['final_value']:,.2f} {curr}   | {a['final_value']:,.2f} {curr}")
     
     c_ret_color = CLR_GREEN if c['total_return_pct'] >= 0 else CLR_RED
     b_ret_color = CLR_GREEN if b['total_return_pct'] >= 0 else CLR_RED
     a_ret_color = CLR_GREEN if a['total_return_pct'] >= 0 else CLR_RED
     print(f"  Toplam Net Getiri            | {c_ret_color}%{c['total_return_pct']:.2f}{CLR_RESET}            | {b_ret_color}%{b['total_return_pct']:.2f}{CLR_RESET}            | {a_ret_color}%{a['total_return_pct']:.2f}{CLR_RESET}")
     
-    print(f"  XU100 Endeks Getirisi        | %{c['xu100_return_pct']:.2f}            | %{b['xu100_return_pct']:.2f}            | %{a['xu100_return_pct']:.2f}")
+    print(f"  Endeks Benchmark Getirisi    | %{c['xu100_return_pct']:.2f}            | %{b['xu100_return_pct']:.2f}            | %{a['xu100_return_pct']:.2f}")
     
     c_alp_color = CLR_GREEN if c['alpha'] >= 0 else CLR_RED
     b_alp_color = CLR_GREEN if b['alpha'] >= 0 else CLR_RED
@@ -741,26 +1064,26 @@ def run_historical_backtest():
     print(f"  Kar Al İsabeti (TP Hit)      | {c['take_profit_count']:2} adet           | {b['take_profit_count']:2} adet           | {a['take_profit_count']:2} adet")
     print(f"  Sinyal Bazlı Satış (Signal)  | {c['signal_sell_count']:2} adet           | {b['signal_sell_count']:2} adet           | {a['signal_sell_count']:2} adet")
     print(f"{CLR_CYAN}{CLR_BOLD}=========================================================================================={CLR_RESET}\n")
-
-    # 5. Save all results to a structured JSON file
-    # We choose the "balanced" scenario (Enflasyon Dengeli) as the primary/default payload for backward compatibility,
-    # and save all scenarios in a sub-dictionary.
+ 
+    # 5. Save all results to a structured JSON file using autopsy_volmom as default top-level data
+    champ = results["autopsy_volmom"]
     results_payload = {
-        "initial_capital": b["initial_capital"],
-        "final_value": b["final_value"],
-        "total_return_pct": b["total_return_pct"],
-        "xu100_return_pct": b["xu100_return_pct"],
-        "alpha": b["alpha"],
-        "total_trades": b["total_trades"],
-        "win_rate": b["win_rate"],
-        "incorrect_decision_rate": b["incorrect_decision_rate"],
-        "avg_trade_return": b["avg_trade_return"],
-        "avg_max_drawdown": b["avg_max_drawdown"],
-        "stop_loss_count": b["stop_loss_count"],
-        "take_profit_count": b["take_profit_count"],
-        "signal_sell_count": b["signal_sell_count"],
-        "trades": b["trades"],
+        "initial_capital": champ["initial_capital"],
+        "final_value": champ["final_value"],
+        "total_return_pct": champ["total_return_pct"],
+        "xu100_return_pct": champ["xu100_return_pct"],
+        "alpha": champ["alpha"],
+        "total_trades": champ["total_trades"],
+        "win_rate": champ["win_rate"],
+        "incorrect_decision_rate": champ["incorrect_decision_rate"],
+        "avg_trade_return": champ["avg_trade_return"],
+        "avg_max_drawdown": champ["avg_max_drawdown"],
+        "stop_loss_count": champ["stop_loss_count"],
+        "take_profit_count": champ["take_profit_count"],
+        "signal_sell_count": champ["signal_sell_count"],
+        "trades": champ["trades"],
         "scenarios": {
+            "autopsy_volmom": champ,
             "conservative": c,
             "balanced": b,
             "active": a,
@@ -770,9 +1093,21 @@ def run_historical_backtest():
     
     os.makedirs("./data", exist_ok=True)
     import json
-    with open("./data/backtest_results.json", "w", encoding="utf-8") as f:
+    with open(output_file, "w", encoding="utf-8") as f:
         json.dump(results_payload, f, ensure_ascii=False, indent=2)
-    print("[Rapor] Tüm simülasyon detayları 'data/backtest_results.json' dosyasına kaydedildi.")
+    print(f"[Rapor] Tüm simülasyon detayları '{output_file}' dosyasına kaydedildi.")
+
+def run_historical_backtest():
+    print(f"\n{CLR_CYAN}{CLR_BOLD}==========================================================================")
+    print("      KÜRESEL PIYASALAR GERİYE DÖNÜK SİMÜLASYON MOTORU (365 GÜN)")
+    print(f"=========================================================================={CLR_RESET}\n")
+    
+    # Run BIST Backtests
+    execute_market_backtest("BIST")
+    
+    # Run S&P 500 Backtests
+    execute_market_backtest("SP500")
 
 if __name__ == "__main__":
     run_historical_backtest()
+

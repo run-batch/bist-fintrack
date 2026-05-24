@@ -1654,3 +1654,38 @@ select:focus {
     color: var(--clr-primary);
     filter: drop-shadow(0 0 4px rgba(99, 102, 241, 0.5));
 }
+
+/* Market Selector CSS */
+.market-btn {
+    flex: 1;
+    padding: 14px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-glass);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-family: var(--font-sans);
+}
+
+.market-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.market-btn.active {
+    color: white;
+    background: rgba(99, 102, 241, 0.1);
+    border-color: var(--clr-primary);
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.25);
+}
+
+.market-btn.active i {
+    text-shadow: 0 0 8px currentColor;
+}
+
