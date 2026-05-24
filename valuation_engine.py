@@ -7,8 +7,81 @@ Tüm DCF, Graham, DuPont bankacılık ve kompozit Yapay Zeka Zeka Skorları bura
 app.py ve backtest_simulation.py bu dosyayı import eder.
 """
 
+import os
+import json
 import numpy as np
 import pandas as pd
+import yfinance as yf
+from datetime import datetime, timedelta
+
+def get_usd_try_rates(start_date_str, end_date_str):
+    """
+    Retrieves USD/TRY exchange rates dynamically and caches them locally to avoid repeating downloads.
+    Only downloads missing date ranges between the last cached date and the end date.
+    Returns a dictionary mapping date strings to USD/TRY rates.
+    """
+    cache_dir = "./data/price_cache"
+    os.makedirs(cache_dir, exist_ok=True)
+    cache_path = os.path.join(cache_dir, "usd_try_rates.json")
+    
+    rates = {}
+    if os.path.exists(cache_path):
+        try:
+            with open(cache_path, "r", encoding="utf-8") as f:
+                rates = json.load(f)
+        except Exception:
+            rates = {}
+            
+    start_dt = datetime.strptime(start_date_str, "%Y-%m-%d")
+    end_dt = datetime.strptime(end_date_str, "%Y-%m-%d")
+    
+    # Check if we need to fetch missing rates
+    target_dates = []
+    curr_dt = start_dt
+    while curr_dt <= end_dt:
+        d_str = curr_dt.strftime("%Y-%m-%d")
+        if d_str not in rates:
+            target_dates.append(curr_dt)
+        curr_dt += timedelta(days=1)
+        
+    if target_dates:
+        fetch_start = target_dates[0].strftime("%Y-%m-%d")
+        fetch_end = (target_dates[-1] + timedelta(days=2)).strftime("%Y-%m-%d")
+        
+        try:
+            df = yf.download("TRY=X", start=fetch_start, end=fetch_end, interval="1d", progress=False)
+            if not df.empty:
+                close = df['Close'].squeeze()
+                if isinstance(close, pd.Series):
+                    for d, val in close.items():
+                        d_str = d.strftime("%Y-%m-%d")
+                        if not np.isnan(val) and val > 0:
+                            rates[d_str] = float(val)
+                elif isinstance(close, float) or isinstance(close, np.float64):
+                    d_str = target_dates[0].strftime("%Y-%m-%d")
+                    rates[d_str] = float(close)
+            
+            with open(cache_path, "w", encoding="utf-8") as f:
+                json.dump(rates, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"[UYARI] Döviz kuru indirilemedi fallback uygulanıyor: {e}")
+            
+    res_rates = {}
+    curr_dt = start_dt
+    last_known_rate = 32.50
+    
+    if rates:
+        sorted_rates = sorted(rates.items())
+        last_known_rate = sorted_rates[-1][1]
+        
+    while curr_dt <= end_dt:
+        d_str = curr_dt.strftime("%Y-%m-%d")
+        if d_str in rates:
+            last_known_rate = rates[d_str]
+        res_rates[d_str] = last_known_rate
+        curr_dt += timedelta(days=1)
+        
+    return res_rates
 
 def calculate_rsi(series, period=14):
     """Safely calculates the 14-period RSI indicator."""
