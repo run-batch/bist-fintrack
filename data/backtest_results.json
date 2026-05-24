@@ -904,15 +904,15 @@
     "aggressive_ai": {
       "scenario_name": "Agresif Zeka Modeli",
       "initial_capital": 100000.0,
-      "final_value": 120269.21869182067,
-      "total_return_pct": 20.26921869182068,
+      "final_value": 120269.21870940116,
+      "total_return_pct": 20.269218709401173,
       "xu100_return_pct": 47.757923822871874,
-      "alpha": -27.488705131051194,
+      "alpha": -27.4887051134707,
       "total_trades": 30,
       "win_rate": 50.0,
       "incorrect_decision_rate": 50.0,
       "avg_trade_return": 4.11064759656209,
-      "avg_max_drawdown": 4.453809581087897,
+      "avg_max_drawdown": 4.453809789594042,
       "stop_loss_count": 26,
       "take_profit_count": 2,
       "signal_sell_count": 1,
@@ -1035,7 +1035,7 @@
           "sell_price": 254.97947692871094,
           "return_pct": 4.526226393012359,
           "type": "STOP-LOSS",
-          "max_drawdown": 1.9657229657655637,
+          "max_drawdown": 1.9657292209499386,
           "incorrect_decision": false
         },
         {
