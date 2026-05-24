@@ -308,6 +308,9 @@ def main():
                 p_close = current_prices.get(t, 0.0)
                 if p_close > 0:
                     eps_val = fund["trailing_eps"]
+                    if fund["market"] == "BIST":
+                        rate = usd_try_rates.get(d_str, 32.5)
+                        eps_val = eps_val / rate
                     pb_ratio = fund["pb_ratio"]
                     pe_ratio = p_close / eps_val if eps_val > 0 else None
                     eveb_ratio = pe_ratio * 0.7 if (pe_ratio and pe_ratio < 100) else 15.0
@@ -353,9 +356,15 @@ def main():
                 'evebitda_mean': 8.0, 'evebitda_std': 2.0
             })
             
+            # Convert BIST EPS to USD for consistent scoring
+            eps_val = fund["trailing_eps"]
+            if fund["market"] == "BIST":
+                rate = usd_try_rates.get(d_str, 32.5)
+                eps_val = eps_val / rate
+
             score = get_aggressive_score(
                 price=p_close,
-                eps=fund["trailing_eps"],
+                eps=eps_val,
                 bvps=p_close / fund["pb_ratio"],
                 roe=fund["roe"],
                 sector=fund["sector"],
@@ -404,6 +413,12 @@ def main():
                 # Count current holdings
                 active_pos_count = len([x for x in holdings.values() if x > 0.0])
                 if active_pos_count >= 20: # max 20 positions
+                    continue
+                    
+                # Market allocation check (max 50% BIST, max 50% S&P 500)
+                mkt = db_funds[t]["market"]
+                mkt_holdings_val = sum([holdings[x] * current_prices[x] for x in all_tickers if db_funds[x]["market"] == mkt])
+                if mkt_holdings_val >= portfolio_val * 0.50:
                     continue
                     
                 p_close = current_prices[t]
